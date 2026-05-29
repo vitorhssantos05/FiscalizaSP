@@ -1,0 +1,703 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: oklch(0.98 0.005 240);
+  --foreground: oklch(0.20 0.02 240);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.20 0.02 240);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.20 0.02 240);
+  --primary: oklch(0.45 0.15 240);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.95 0.01 240);
+  --secondary-foreground: oklch(0.30 0.05 240);
+  --muted: oklch(0.94 0.01 240);
+  --muted-foreground: oklch(0.50 0.02 240);
+  --accent: oklch(0.55 0.18 200);
+  --accent-foreground: oklch(0.98 0 0);
+  --destructive: oklch(0.55 0.22 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.90 0.01 240);
+  --input: oklch(0.92 0.01 240);
+  --ring: oklch(0.45 0.15 240);
+  --chart-1: oklch(0.50 0.15 240);
+  --chart-2: oklch(0.55 0.18 200);
+  --chart-3: oklch(0.60 0.15 150);
+  --chart-4: oklch(0.65 0.20 80);
+  --chart-5: oklch(0.55 0.22 25);
+  --radius: 0.625rem;
+  --success: oklch(0.55 0.18 150);
+  --success-foreground: oklch(0.98 0 0);
+  --warning: oklch(0.70 0.18 80);
+  --warning-foreground: oklch(0.20 0 0);
+  --sidebar: oklch(0.98 0.005 240);
+  --sidebar-foreground: oklch(0.20 0.02 240);
+  --sidebar-primary: oklch(0.45 0.15 240);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.94 0.01 240);
+  --sidebar-accent-foreground: oklch(0.30 0.05 240);
+  --sidebar-border: oklch(0.90 0.01 240);
+  --sidebar-ring: oklch(0.45 0.15 240);
+}
+
+.dark {
+  --background: oklch(0.15 0.02 240);
+  --foreground: oklch(0.95 0.01 240);
+  --card: oklch(0.18 0.02 240);
+  --card-foreground: oklch(0.95 0.01 240);
+  --popover: oklch(0.18 0.02 240);
+  --popover-foreground: oklch(0.95 0.01 240);
+  --primary: oklch(0.60 0.15 240);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.25 0.02 240);
+  --secondary-foreground: oklch(0.90 0.01 240);
+  --muted: oklch(0.25 0.02 240);
+  --muted-foreground: oklch(0.65 0.02 240);
+  --accent: oklch(0.55 0.18 200);
+  --accent-foreground: oklch(0.98 0 0);
+  --destructive: oklch(0.55 0.22 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.30 0.02 240);
+  --input: oklch(0.25 0.02 240);
+  --ring: oklch(0.60 0.15 240);
+  --chart-1: oklch(0.60 0.15 240);
+  --chart-2: oklch(0.55 0.18 200);
+  --chart-3: oklch(0.60 0.15 150);
+  --chart-4: oklch(0.65 0.20 80);
+  --chart-5: oklch(0.55 0.22 25);
+  --success: oklch(0.55 0.18 150);
+  --success-foreground: oklch(0.98 0 0);
+  --warning: oklch(0.70 0.18 80);
+  --warning-foreground: oklch(0.20 0 0);
+  --sidebar: oklch(0.18 0.02 240);
+  --sidebar-foreground: oklch(0.95 0.01 240);
+  --sidebar-primary: oklch(0.60 0.15 240);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.25 0.02 240);
+  --sidebar-accent-foreground: oklch(0.90 0.01 240);
+  --sidebar-border: oklch(0.30 0.02 240);
+  --sidebar-ring: oklch(0.60 0.15 240);
+}
+
+@theme inline {
+  --font-sans: 'Geist', 'Geist Fallback';
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Leaflet CSS fixes for Next.js */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.leaflet-default-icon-path {
+  background-image: url(https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png);
+}
+
+/* Custom marker styles */
+.custom-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Hover effect para marcadores */
+.custom-marker:hover .marker-container {
+  transform: scale(1.15);
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
+}
+
+/* Animação de pulse para o marcador de seleção */
+@keyframes marker-pulse {
+  0%, 100% {
+    transform: rotate(-45deg) scale(1);
+    box-shadow: 0 3px 12px rgba(59, 130, 246, 0.5);
+  }
+  50% {
+    transform: rotate(-45deg) scale(1.1);
+    box-shadow: 0 3px 20px rgba(59, 130, 246, 0.8);
+  }
+}
+
+/* Animação suave ao alterar prioridade/status */
+@keyframes marker-update {
+  0% {
+    transform: rotate(-45deg) scale(1);
+  }
+  50% {
+    transform: rotate(-45deg) scale(1.2);
+  }
+  100% {
+    transform: rotate(-45deg) scale(1);
+  }
+}
+
+.marker-pin {
+  animation: marker-update 0.4s ease-out;
+}
+
+/* ============================================
+   POPUP STYLES - Light & Dark Mode
+   ============================================ */
+
+/* Container do Leaflet Popup */
+.leaflet-popup-content-wrapper {
+  padding: 0 !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 0 2px 10px rgba(0, 0, 0, 0.1) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  background: #ffffff !important;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  width: auto !important;
+  min-width: 220px;
+  max-width: 260px;
+}
+
+.leaflet-popup-tip-container {
+  display: none;
+}
+
+.leaflet-popup-close-button {
+  color: #6b7280 !important;
+  font-size: 20px !important;
+  padding: 8px !important;
+  width: 28px !important;
+  height: 28px !important;
+  right: 6px !important;
+  top: 6px !important;
+  z-index: 10;
+}
+
+.leaflet-popup-close-button:hover {
+  color: #374151 !important;
+}
+
+/* Wrapper do Popup */
+.popup-wrapper {
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Header do Popup */
+.popup-header {
+  height: 50px;
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.popup-header-icon {
+  color: #9ca3af;
+  width: 20px;
+  height: 20px;
+}
+
+/* Corpo do Popup */
+.popup-body {
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Título */
+.popup-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.3;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Categoria */
+.popup-category {
+  display: inline-block;
+  font-size: 10px;
+  color: #4f46e5;
+  font-weight: 500;
+  background: rgba(79, 70, 229, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+  width: fit-content;
+}
+
+/* Localização */
+.popup-location {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.popup-location svg {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+}
+
+/* Badges */
+.popup-badges {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.popup-badge {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.popup-badge svg {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+}
+
+.popup-badge-priority {
+  background: rgba(250, 204, 21, 0.15);
+  color: #a16207;
+}
+
+/* Estatísticas */
+.popup-stats {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  background: #f9fafb;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.popup-stats svg {
+  flex-shrink: 0;
+  color: #9ca3af;
+  width: 12px;
+  height: 12px;
+}
+
+/* Alertas */
+.popup-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  font-size: 10px;
+  color: #a16207;
+  background: rgba(250, 204, 21, 0.12);
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(250, 204, 21, 0.25);
+}
+
+.popup-alert svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  width: 10px;
+  height: 10px;
+}
+
+/* Botão */
+.popup-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #ffffff;
+  background: #4f46e5;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 2px;
+}
+
+.popup-button:hover {
+  background: #4338ca;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+}
+
+.popup-button:active {
+  transform: translateY(0);
+}
+
+.popup-button svg {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+}
+
+/* ============================================
+   DARK MODE POPUP OVERRIDES
+   ============================================ */
+
+html.dark .leaflet-popup-content-wrapper,
+:root.dark .leaflet-popup-content-wrapper,
+.dark .leaflet-popup-content-wrapper {
+  background: #1f2937 !important;
+  border-color: #374151 !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4), 0 2px 10px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.dark .leaflet-popup-close-button,
+:root.dark .leaflet-popup-close-button,
+.dark .leaflet-popup-close-button {
+  color: #9ca3af !important;
+}
+
+html.dark .leaflet-popup-close-button:hover,
+:root.dark .leaflet-popup-close-button:hover,
+.dark .leaflet-popup-close-button:hover {
+  color: #f3f4f6 !important;
+}
+
+html.dark .popup-header,
+:root.dark .popup-header,
+.dark .popup-header {
+  background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+  border-bottom-color: #374151;
+}
+
+html.dark .popup-header-icon,
+:root.dark .popup-header-icon,
+.dark .popup-header-icon {
+  color: #6b7280;
+}
+
+html.dark .popup-title,
+:root.dark .popup-title,
+.dark .popup-title {
+  color: #f9fafb;
+}
+
+html.dark .popup-category,
+:root.dark .popup-category,
+.dark .popup-category {
+  color: #818cf8;
+  background: rgba(129, 140, 248, 0.15);
+}
+
+html.dark .popup-location,
+:root.dark .popup-location,
+.dark .popup-location {
+  color: #9ca3af;
+}
+
+html.dark .popup-stats,
+:root.dark .popup-stats,
+.dark .popup-stats {
+  background: #374151;
+  color: #d1d5db;
+}
+
+html.dark .popup-stats svg,
+:root.dark .popup-stats svg,
+.dark .popup-stats svg {
+  color: #6b7280;
+}
+
+html.dark .popup-alert,
+:root.dark .popup-alert,
+.dark .popup-alert {
+  color: #fde047;
+  background: rgba(250, 204, 21, 0.08);
+  border-color: rgba(250, 204, 21, 0.2);
+}
+
+html.dark .popup-button,
+:root.dark .popup-button,
+.dark .popup-button {
+  background: #6366f1;
+}
+
+html.dark .popup-button:hover,
+:root.dark .popup-button:hover,
+.dark .popup-button:hover {
+  background: #818cf8;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+/* ============================================
+   LEGEND STYLES - Light & Dark Mode
+   ============================================ */
+
+.map-legend {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  z-index: 400;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0;
+  min-width: 220px;
+  max-width: calc(100vw - 32px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1), 0 1px 4px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+/* Esconder legenda quando sheet de detalhes está aberto */
+body:has([data-state="open"][role="dialog"]) .map-legend {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+}
+
+/* Mobile: legenda muito compacta */
+@media (max-width: 640px) {
+  .map-legend {
+    bottom: 8px;
+    left: 8px;
+    min-width: auto;
+    max-width: 150px;
+    width: auto;
+  }
+  
+  .map-legend .legend-section {
+    padding: 4px 8px;
+  }
+  
+  .map-legend .legend-header {
+    padding: 5px 8px;
+    font-size: 9px;
+    gap: 4px;
+  }
+  
+  .map-legend .legend-header-icon {
+    width: 10px;
+    height: 10px;
+  }
+  
+  .map-legend .legend-section-title {
+    font-size: 8px;
+    margin-bottom: 3px;
+  }
+  
+  .map-legend .legend-items {
+    gap: 3px;
+  }
+  
+  .map-legend .legend-item-label {
+    font-size: 9px;
+  }
+  
+  .map-legend .legend-item-color {
+    font-size: 7px;
+  }
+  
+  .map-legend .legend-marker-preview {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .map-legend .legend-marker-mini {
+    width: 10px;
+    height: 10px;
+    border-width: 2px;
+  }
+  
+  .map-legend .legend-item {
+    gap: 4px;
+  }
+  
+  .map-legend .legend-item-info {
+    gap: 0;
+  }
+}
+
+.legend-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--muted);
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--foreground);
+  border: none;
+  width: 100%;
+  text-align: left;
+}
+
+.legend-header:focus {
+  outline: none;
+}
+
+.legend-content {
+  /* Para animação suave se necessário */
+}
+
+/* Mobile: esconder conteúdo quando colapsado */
+@media (max-width: 639px) {
+  .legend-content.legend-collapsed {
+    display: none !important;
+  }
+  
+  .map-legend:has(.legend-collapsed) {
+    min-width: auto;
+  }
+}
+
+.legend-header-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--primary);
+}
+
+.legend-section {
+  padding: 12px 16px;
+}
+
+.legend-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 10px 0;
+}
+
+.legend-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.legend-marker-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.legend-marker-mini {
+  width: 18px;
+  height: 18px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  border-width: 3px;
+  border-style: solid;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.legend-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.legend-item-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.legend-item-color {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.legend-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0;
+}
+
+/* Dark mode legend adjustments */
+.dark .map-legend {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.dark .legend-marker-mini {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Smooth transitions */
+.transition-theme {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Safe area padding for mobile bottom navigation */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
