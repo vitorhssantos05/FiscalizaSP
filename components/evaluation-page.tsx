@@ -116,13 +116,13 @@ export function EvaluationPage() {
 
   const finishE1 = () => setPhase("transition")
 
-  const finishE2 = (summary: GuidedTaskSummary) => {
+  const finishE3 = (summary: GuidedTaskSummary) => {
     clearDraft()
     setTaskSummary(summary)
     setPhase("completed")
   }
 
-  const abandonE2 = () => {
+  const abandonEvaluation = () => {
     clearDraft()
     setPhase("declined")
   }
@@ -136,7 +136,7 @@ export function EvaluationPage() {
   if (phase === "tasks") {
     return (
       <AppProvider initialNickname="Participante">
-        <GuidedCitizenTasks onFinish={finishE2} onAbandon={abandonE2} />
+        <GuidedCitizenTasks onFinish={finishE3} onAbandon={abandonEvaluation} />
       </AppProvider>
     )
   }
@@ -394,7 +394,7 @@ export function EvaluationPage() {
               <Check aria-hidden="true" className="size-6" />
             </div>
             <CardTitle>Avaliação demonstrativa concluída</CardTitle>
-            <CardDescription>Obrigado por participar das etapas E1 e E2 do protótipo.</CardDescription>
+            <CardDescription>Obrigado por participar das etapas E1, E2 e E3 do protótipo.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <p className="text-sm text-muted-foreground">
@@ -406,7 +406,7 @@ export function EvaluationPage() {
               <AlertDescription>Nenhuma ocorrência, comentário, apoio ou voto desta avaliação foi publicado ou preservado.</AlertDescription>
             </Alert>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              As tarefas administrativas da E3, o questionário da E4 e a coleta de métricas da E5 serão desenvolvidos posteriormente.
+              O questionário Likert e o encerramento da avaliação serão apresentados na Etapa E4, quando forem autorizados.
             </p>
           </CardContent>
           <CardFooter className="border-t pt-6">
