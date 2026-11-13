@@ -127,17 +127,17 @@ export function Navigation({
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <div
-                  className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-3 transition-colors ${
+                  className={`flex items-center justify-between gap-2.5 rounded-lg border px-2.5 py-2 transition-colors ${
                     isAdminDemoMode
                       ? "border-primary/60 bg-primary/10"
                       : "border-border bg-muted/20 hover:border-primary/40 hover:bg-primary/5"
                   }`}
                 >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                      <Shield aria-hidden="true" className="size-5" />
+                  <div className="flex min-w-0 items-center gap-2">
+                    <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                      <Shield aria-hidden="true" className="size-4" />
                     </div>
-                    <Label htmlFor="admin-demo-mode" className="cursor-pointer text-base font-semibold">
+                    <Label htmlFor="admin-demo-mode" className="cursor-pointer text-sm font-semibold">
                       Modo Admin
                     </Label>
                   </div>
