@@ -30,11 +30,14 @@ const MapComponent = dynamic(
 export function ExplorePage() {
   const { occurrences } = useApp()
   const [viewMode, setViewMode] = useState<"map" | "list">("map")
-  const [selectedOccurrence, setSelectedOccurrence] = useState<Occurrence | null>(null)
+  const [selectedOccurrenceId, setSelectedOccurrenceId] = useState<string | null>(null)
   const [detailSheetOpen, setDetailSheetOpen] = useState(false)
+  const selectedOccurrence = occurrences.find(
+    (occurrence) => occurrence.id === selectedOccurrenceId,
+  ) ?? null
 
   const handleViewDetails = (occurrence: Occurrence) => {
-    setSelectedOccurrence(occurrence)
+    setSelectedOccurrenceId(occurrence.id)
     setDetailSheetOpen(true)
   }
 

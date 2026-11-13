@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { useApp } from "@/lib/app-context"
 import type { Occurrence, Priority } from "@/lib/types"
 import { categoryLabels, statusLabels, priorityLabels } from "@/lib/types"
@@ -64,6 +64,10 @@ export function OccurrenceDetailSheet({
   } = useApp()
   const [newComment, setNewComment] = useState("")
   const [showAllComments, setShowAllComments] = useState(false)
+  const lastSubmittedComment = useRef<{
+    occurrenceId: string
+    message: string
+  } | null>(null)
   
   // Estado para o modal de Voto Consciente
   const [showVoteDialog, setShowVoteDialog] = useState(false)
@@ -153,12 +157,25 @@ export function OccurrenceDetailSheet({
 
   const handleAddComment = () => {
     const message = newComment.trim()
-    if (!message) return
+    const wasAlreadySubmitted =
+      lastSubmittedComment.current?.occurrenceId === occurrence.id &&
+      lastSubmittedComment.current.message === message
+    if (!message || wasAlreadySubmitted) return
 
     requestNickname(() => {
-      addComment(occurrence.id, message)
-      setNewComment("")
-      toast.success("Comentário adicionado!")
+      const wasAlreadySubmitted =
+        lastSubmittedComment.current?.occurrenceId === occurrence.id &&
+        lastSubmittedComment.current.message === message
+      if (wasAlreadySubmitted) return
+
+      try {
+        addComment(occurrence.id, message)
+        lastSubmittedComment.current = { occurrenceId: occurrence.id, message }
+        setNewComment("")
+        toast.success("Comentário adicionado!")
+      } catch {
+        toast.error("Não foi possível publicar o comentário. Tente novamente.")
+      }
     })
   }
 
@@ -592,11 +609,15 @@ export function OccurrenceDetailSheet({
                   <Textarea
                     placeholder="Adicionar um comentário..."
                     value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
+                    onChange={(e) => {
+                      setNewComment(e.target.value)
+                      lastSubmittedComment.current = null
+                    }}
                     className="min-h-[80px] resize-none"
                   />
                 </div>
                 <Button
+                  type="button"
                   className="w-full mt-2"
                   onClick={handleAddComment}
                   disabled={!newComment.trim()}
