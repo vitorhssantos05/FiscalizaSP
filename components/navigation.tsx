@@ -21,6 +21,7 @@ import {
   PlusCircle,
   LayoutDashboard,
   ClipboardCheck,
+  Shield,
 } from "lucide-react"
 
 type Page = "home" | "explore" | "register" | "admin" | "evaluation"
@@ -125,10 +126,21 @@ export function Navigation({
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <div className="flex items-center justify-between gap-3 px-2 py-2">
-                  <Label htmlFor="admin-demo-mode" className="text-sm font-medium">
-                    Modo Admin (demonstração)
-                  </Label>
+                <div
+                  className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-3 transition-colors ${
+                    isAdminDemoMode
+                      ? "border-primary/60 bg-primary/10"
+                      : "border-border bg-muted/20 hover:border-primary/40 hover:bg-primary/5"
+                  }`}
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <Shield aria-hidden="true" className="size-5" />
+                    </div>
+                    <Label htmlFor="admin-demo-mode" className="cursor-pointer text-base font-semibold">
+                      Modo Admin
+                    </Label>
+                  </div>
                   <Switch
                     id="admin-demo-mode"
                     checked={isAdminDemoMode}
@@ -136,7 +148,7 @@ export function Navigation({
                     aria-describedby="admin-demo-description"
                   />
                 </div>
-                <p id="admin-demo-description" className="px-2 pb-2 text-xs text-muted-foreground">
+                <p id="admin-demo-description" className="px-2 pt-2 text-xs text-muted-foreground">
                   Acesso demonstrativo; não concede privilégios administrativos reais.
                 </p>
               </DropdownMenuContent>
@@ -159,8 +171,8 @@ export function Navigation({
                 aria-label={item.adminOnly ? "Painel Admin (demonstração)" : item.label}
                 title={item.adminOnly ? "Painel demonstrativo; sem privilégios administrativos reais" : undefined}
                 className={`flex flex-col items-center justify-center flex-1 h-full gap-1 transition-colors ${
-                  isActive 
-                    ? "text-primary" 
+                  isActive || item.adminOnly
+                    ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
