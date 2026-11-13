@@ -51,6 +51,7 @@ export function OccurrenceDetailSheet({
   onOpenChange,
 }: OccurrenceDetailSheetProps) {
   const {
+    requestNickname,
     supportOccurrence,
     voteOnPriority,
     confirmResolution,
@@ -84,25 +85,23 @@ export function OccurrenceDetailSheet({
   const hasVoted = !!userVote
 
   const handleSupport = () => {
-    supportOccurrence(occurrence.id)
-    toast.success("Você apoiou esta ocorrência!", {
-      description: `${occurrence.supports + 1} pessoas apoiam este problema`,
+    requestNickname(() => {
+      supportOccurrence(occurrence.id)
+      toast.success("Você apoiou esta ocorrência!", {
+        description: `${occurrence.supports + 1} pessoas apoiam este problema`,
+      })
     })
   }
 
   // Inicia o fluxo de votacao consciente
   const initiateVote = (priority: Priority) => {
-    const existingVote = getUserVote(occurrence.id)
-    
-    // Se esta alterando o voto
-    if (existingVote) {
-      setIsChangingVote(true)
-    } else {
-      setIsChangingVote(false)
-    }
-    
-    setPendingVotePriority(priority)
-    setShowVoteDialog(true)
+    requestNickname(() => {
+      const existingVote = getUserVote(occurrence.id)
+
+      setIsChangingVote(!!existingVote)
+      setPendingVotePriority(priority)
+      setShowVoteDialog(true)
+    })
   }
 
   // Confirma o voto apos reflexao
@@ -125,32 +124,41 @@ export function OccurrenceDetailSheet({
   }
 
   const handleConfirmResolution = () => {
-    confirmResolution(occurrence.id)
-    toast.success("Confirmação registrada!", {
-      description: "Obrigado por confirmar que o problema foi resolvido",
+    requestNickname(() => {
+      confirmResolution(occurrence.id)
+      toast.success("Confirmação registrada!", {
+        description: "Obrigado por confirmar que o problema foi resolvido",
+      })
     })
   }
 
   const handleContestResolution = () => {
-    contestResolution(occurrence.id)
-    toast.warning("Contestação registrada", {
-      description: "Seu relato foi registrado. Obrigado pelo feedback.",
+    requestNickname(() => {
+      contestResolution(occurrence.id)
+      toast.warning("Contestação registrada", {
+        description: "Seu relato foi registrado. Obrigado pelo feedback.",
+      })
     })
   }
 
   const handleContestExistence = () => {
-    contestExistence(occurrence.id)
-    toast.warning("Contestação registrada", {
-      description: "Seu relato de que esta ocorrência não existe foi registrado.",
+    requestNickname(() => {
+      contestExistence(occurrence.id)
+      toast.warning("Contestação registrada", {
+        description: "Seu relato de que esta ocorrência não existe foi registrado.",
+      })
     })
   }
 
   const handleAddComment = () => {
-    if (newComment.trim()) {
-      addComment(occurrence.id, newComment.trim())
+    const message = newComment.trim()
+    if (!message) return
+
+    requestNickname(() => {
+      addComment(occurrence.id, message)
       setNewComment("")
       toast.success("Comentário adicionado!")
-    }
+    })
   }
 
   const getPriorityColor = (priority: Priority) => {

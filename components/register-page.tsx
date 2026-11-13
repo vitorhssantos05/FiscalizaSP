@@ -43,7 +43,7 @@ interface RegisterPageProps {
 }
 
 export function RegisterPage({ onSuccess }: RegisterPageProps) {
-  const { addOccurrence } = useApp()
+  const { addOccurrence, requestNickname } = useApp()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
 
@@ -139,7 +139,7 @@ export function RegisterPage({ onSuccess }: RegisterPageProps) {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     // Validation
@@ -160,42 +160,41 @@ export function RegisterPage({ onSuccess }: RegisterPageProps) {
       return
     }
 
-    setIsSubmitting(true)
+    requestNickname(() => {
+      void (async () => {
+        setIsSubmitting(true)
+        await new Promise((resolve) => setTimeout(resolve, 1000))
 
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+        addOccurrence({
+          title: title.trim(),
+          description: description.trim(),
+          category,
+          status: "pendente",
+          initialPriority: priority,
+          neighborhood: neighborhood || "Centro",
+          address: address || "Endereço não especificado",
+          latitude: selectedLocation.lat,
+          longitude: selectedLocation.lng,
+          imageUrl: imagePreview || undefined,
+        })
 
-    addOccurrence({
-      title: title.trim(),
-      description: description.trim(),
-      category,
-      status: "pendente",
-      initialPriority: priority,
-      neighborhood: neighborhood || "Centro",
-      address: address || "Endereço não especificado",
-      latitude: selectedLocation.lat,
-      longitude: selectedLocation.lng,
-      imageUrl: imagePreview || undefined,
+        toast.success("Ocorrência registrada com sucesso!", {
+          description: "Sua denúncia foi adicionada ao sistema",
+        })
+
+        setTitle("")
+        setDescription("")
+        setCategory("")
+        setPriority("media")
+        setAddress("")
+        setNeighborhood("")
+        setSelectedLocation(null)
+        setImagePreview(null)
+        setIsSubmitting(false)
+
+        onSuccess?.()
+      })()
     })
-
-    toast.success("Ocorrência registrada com sucesso!", {
-      description: "Sua denúncia foi adicionada ao sistema",
-    })
-
-    // Reset form
-    setTitle("")
-    setDescription("")
-    setCategory("")
-    setPriority("media")
-    setAddress("")
-    setNeighborhood("")
-    setSelectedLocation(null)
-    setImagePreview(null)
-    setIsSubmitting(false)
-
-    if (onSuccess) {
-      onSuccess()
-    }
   }
 
   const isFormValid = title.trim() && description.trim() && category && selectedLocation

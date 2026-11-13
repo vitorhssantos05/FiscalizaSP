@@ -6,27 +6,26 @@ import {
   useState,
   useMemo,
   useCallback,
+  useRef,
   type ReactNode,
 } from "react"
 import type {
   Occurrence,
-  User,
   OccurrenceStatus,
   Priority,
   Comment,
   UserVoteRecord,
 } from "@/lib/types"
-import { initialOccurrences, mockUser, mockAdminUser } from "@/lib/mock-data"
+import { initialOccurrences } from "@/lib/mock-data"
 import { calculateDynamicPriority } from "@/lib/types"
 
 interface AppContextType {
-  // User state
-  user: User | null
-  isAuthenticated: boolean
-  isAdminMode: boolean
-  login: (email: string, password: string, asAdmin?: boolean, name?: string) => void
-  logout: () => void
-  toggleAdminMode: () => void
+  // Temporary MVP nickname; it is not authentication or a trusted identity.
+  nickname: string | null
+  nicknameDialogOpen: boolean
+  requestNickname: (action: () => void) => void
+  submitNickname: (name: string) => void
+  closeNicknameDialog: () => void
 
   // Theme state
   isDarkMode: boolean
@@ -63,9 +62,37 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined)
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  // User state
-  const [user, setUser] = useState<User | null>(null)
-  const [isAdminMode, setIsAdminMode] = useState(false)
+  // This in-memory label is temporary and must never be treated as authentication.
+  const [nickname, setNickname] = useState<string | null>(null)
+  const [nicknameDialogOpen, setNicknameDialogOpen] = useState(false)
+  const pendingNicknameAction = useRef<(() => void) | null>(null)
+  const nicknameRef = useRef<string | null>(null)
+
+  const requestNickname = useCallback((action: () => void) => {
+    if (nickname) {
+      action()
+      return
+    }
+    pendingNicknameAction.current = action
+    setNicknameDialogOpen(true)
+  }, [nickname])
+
+  const submitNickname = useCallback((name: string) => {
+    const trimmedName = name.trim()
+    if (!trimmedName) return
+
+    nicknameRef.current = trimmedName
+    setNickname(trimmedName)
+    setNicknameDialogOpen(false)
+    const pendingAction = pendingNicknameAction.current
+    pendingNicknameAction.current = null
+    pendingAction?.()
+  }, [])
+
+  const closeNicknameDialog = useCallback(() => {
+    pendingNicknameAction.current = null
+    setNicknameDialogOpen(false)
+  }, [])
 
   // Theme state
   const [isDarkMode, setIsDarkMode] = useState(true)
@@ -75,36 +102,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // User vote tracking state (Voto Consciente)
   const [userVotes, setUserVotes] = useState<UserVoteRecord[]>([])
-
-  // Auth functions
-  const login = useCallback((email: string, _password: string, asAdmin = false, name?: string) => {
-    // Mock login - always succeeds
-    if (asAdmin) {
-      setUser(mockAdminUser)
-      setIsAdminMode(true)
-    } else {
-      const userName = name || email.split("@")[0] || "Usuario"
-      const userEmail = email || "usuario@email.com"
-      setUser({
-        id: `user-${Date.now()}`,
-        name: userName,
-        email: userEmail,
-        isAdmin: false,
-        avatar: undefined,
-      })
-      setIsAdminMode(false)
-    }
-  }, [])
-
-  const logout = useCallback(() => {
-    setUser(null)
-    setIsAdminMode(false)
-    setUserVotes([]) // Limpa votos ao fazer logout
-  }, [])
-
-  const toggleAdminMode = useCallback(() => {
-    setIsAdminMode((prev) => !prev)
-  }, [])
 
   // Theme functions
   const toggleDarkMode = useCallback(() => {
@@ -253,7 +250,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const addComment = useCallback((occurrenceId: string, message: string) => {
     const newComment: Comment = {
       id: `comment-${Date.now()}`,
-      author: user?.name || "Usuario Anonimo",
+      author: nicknameRef.current || nickname || "Visitante",
       message,
       createdAt: new Date(),
     }
@@ -264,7 +261,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           : occ
       )
     )
-  }, [user?.name])
+  }, [nickname])
 
   // Statistics
   const stats = useMemo(() => {
@@ -283,12 +280,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({
-      user,
-      isAuthenticated: user !== null,
-      isAdminMode,
-      login,
-      logout,
-      toggleAdminMode,
+      nickname,
+      nicknameDialogOpen,
+      requestNickname,
+      submitNickname,
+      closeNicknameDialog,
       isDarkMode,
       toggleDarkMode,
       occurrences,
@@ -307,11 +303,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       getDynamicPriority,
     }),
     [
-      user,
-      isAdminMode,
-      login,
-      logout,
-      toggleAdminMode,
+      nickname,
+      nicknameDialogOpen,
+      requestNickname,
+      submitNickname,
+      closeNicknameDialog,
       isDarkMode,
       toggleDarkMode,
       occurrences,
