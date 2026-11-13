@@ -61,6 +61,8 @@ export function OccurrenceDetailSheet({
     addComment,
     getDynamicPriority,
     getUserVote,
+    canChangeVote,
+    getUserInteraction,
   } = useApp()
   const [newComment, setNewComment] = useState("")
   const [showAllComments, setShowAllComments] = useState(false)
@@ -76,6 +78,7 @@ export function OccurrenceDetailSheet({
 
   if (!occurrence) return null
 
+  const userInteraction = getUserInteraction(occurrence.id)
   const dynamicPriority = getDynamicPriority(occurrence)
   const totalPriorityVotes =
     occurrence.priorityVotes.baixa +
@@ -91,7 +94,12 @@ export function OccurrenceDetailSheet({
 
   const handleSupport = () => {
     requestNickname(() => {
-      supportOccurrence(occurrence.id)
+      const supported = supportOccurrence(occurrence.id)
+      if (!supported) {
+        toast.info("Você já apoiou esta ocorrência nesta sessão.")
+        return
+      }
+
       toast.success("Você apoiou esta ocorrência!", {
         description: `${occurrence.supports + 1} pessoas apoiam este problema`,
       })
@@ -100,10 +108,24 @@ export function OccurrenceDetailSheet({
 
   // Inicia o fluxo de votacao consciente
   const initiateVote = (priority: Priority) => {
-    requestNickname(() => {
-      const existingVote = getUserVote(occurrence.id)
+    const existingVote = getUserVote(occurrence.id)
+    if (existingVote?.priority === priority) {
+      toast.info(`Seu voto já está definido como prioridade ${priorityLabels[priority]}.`)
+      return
+    }
+    if (existingVote && !canChangeVote(occurrence.id)) {
+      toast.warning("Você já usou a única alteração de voto permitida nesta sessão.")
+      return
+    }
 
-      setIsChangingVote(!!existingVote)
+    requestNickname(() => {
+      const latestVote = getUserVote(occurrence.id)
+      if (latestVote && !canChangeVote(occurrence.id)) {
+        toast.warning("Você já usou a única alteração de voto permitida nesta sessão.")
+        return
+      }
+
+      setIsChangingVote(!!latestVote)
       setPendingVotePriority(priority)
       setShowVoteDialog(true)
     })
@@ -112,9 +134,10 @@ export function OccurrenceDetailSheet({
   // Confirma o voto apos reflexao
   const confirmVote = () => {
     if (pendingVotePriority) {
-      voteOnPriority(occurrence.id, pendingVotePriority)
-      
-      if (isChangingVote) {
+      const recorded = voteOnPriority(occurrence.id, pendingVotePriority)
+      if (!recorded) {
+        toast.warning("Este voto não pode ser alterado novamente nesta sessão.")
+      } else if (isChangingVote) {
         toast.success("Voto alterado!", {
           description: `Seu voto foi alterado para prioridade ${priorityLabels[pendingVotePriority]}.`,
         })
@@ -130,28 +153,40 @@ export function OccurrenceDetailSheet({
 
   const handleConfirmResolution = () => {
     requestNickname(() => {
-      confirmResolution(occurrence.id)
-      toast.success("Confirmação registrada!", {
-        description: "Obrigado por confirmar que o problema foi resolvido",
-      })
+      const confirmed = confirmResolution(occurrence.id)
+      if (confirmed) {
+        toast.success("Confirmação registrada!", {
+          description: "Obrigado por confirmar que o problema foi resolvido",
+        })
+      } else {
+        toast.info("Você já registrou uma avaliação para esta resolução nesta sessão.")
+      }
     })
   }
 
   const handleContestResolution = () => {
     requestNickname(() => {
-      contestResolution(occurrence.id)
-      toast.warning("Contestação registrada", {
-        description: "Seu relato foi registrado. Obrigado pelo feedback.",
-      })
+      const contested = contestResolution(occurrence.id)
+      if (contested) {
+        toast.warning("Contestação registrada", {
+          description: "Seu relato foi registrado. Obrigado pelo feedback.",
+        })
+      } else {
+        toast.info("Você já registrou uma avaliação para esta resolução nesta sessão.")
+      }
     })
   }
 
   const handleContestExistence = () => {
     requestNickname(() => {
-      contestExistence(occurrence.id)
-      toast.warning("Contestação registrada", {
-        description: "Seu relato de que esta ocorrência não existe foi registrado.",
-      })
+      const contested = contestExistence(occurrence.id)
+      if (contested) {
+        toast.warning("Contestação registrada", {
+          description: "Seu relato de que esta ocorrência não existe foi registrado.",
+        })
+      } else {
+        toast.info("Você já contestou esta ocorrência nesta sessão.")
+      }
     })
   }
 
@@ -316,9 +351,14 @@ export function OccurrenceDetailSheet({
                   <p className="text-sm text-muted-foreground mb-3">
                     Confirme que este problema existe e precisa de atenção
                   </p>
-                  <Button onClick={handleSupport} className="gap-2 w-full">
+                  <Button
+                    onClick={handleSupport}
+                    className="gap-2 w-full"
+                    variant={userInteraction.hasSupported ? "secondary" : "default"}
+                    disabled={userInteraction.hasSupported}
+                  >
                     <ThumbsUp className="h-4 w-4" />
-                    Apoiar
+                    {userInteraction.hasSupported ? "Apoio registrado" : "Apoiar"}
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -341,9 +381,12 @@ export function OccurrenceDetailSheet({
                       size="sm"
                       className="w-full border-yellow-300/50 hover:bg-yellow-300/10 text-yellow-600"
                       onClick={handleContestExistence}
+                      disabled={userInteraction.hasContestedExistence}
                     >
                       <AlertCircle className="h-4 w-4 mr-2" />
-                      Problema não encontrado
+                      {userInteraction.hasContestedExistence
+                        ? "Contestação registrada"
+                        : "Problema não encontrado"}
                     </Button>
                     {occurrence.existenceContestations > 0 && (
                       <p className="text-xs text-yellow-600 mt-2 flex items-center gap-1">
@@ -426,6 +469,16 @@ export function OccurrenceDetailSheet({
                     {totalPriorityVotes} voto{totalPriorityVotes !== 1 ? "s" : ""} no total
                   </p>
                 )}
+                {userVote && (
+                  <p className="text-xs text-muted-foreground mt-2" role="status">
+                    {userVote.hasChanged
+                      ? "Você já usou sua única alteração de voto nesta sessão."
+                      : "Você pode alterar seu voto uma vez nesta sessão."}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground mt-2">
+                  Os limites são demonstrativos e valem somente nesta sessão; a validação definitiva será feita no servidor.
+                </p>
               </div>
 
               {/* Resolution Confirmation (only for resolved) */}
@@ -443,20 +496,35 @@ export function OccurrenceDetailSheet({
                         size="sm"
                         className="w-full border-green-500/50 hover:bg-green-500/10 justify-start"
                         onClick={handleConfirmResolution}
+                        disabled={userInteraction.resolutionFeedback !== null}
                       >
                         <CheckCircle2 className="h-4 w-4 mr-2 text-green-500 shrink-0" />
-                        Confirmar resolução
+                        {userInteraction.resolutionFeedback === "confirmation"
+                          ? "Resolução confirmada por você"
+                          : userInteraction.resolutionFeedback === "contestation"
+                            ? "Avaliação já registrada"
+                            : "Confirmar resolução"}
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         className="w-full border-yellow-300/50 hover:bg-yellow-300/10 justify-start"
                         onClick={handleContestResolution}
+                        disabled={userInteraction.resolutionFeedback !== null}
                       >
                         <AlertTriangle className="h-4 w-4 mr-2 text-yellow-300 shrink-0" />
-                        Problema continua
+                        {userInteraction.resolutionFeedback === "contestation"
+                          ? "Contestação registrada por você"
+                          : userInteraction.resolutionFeedback === "confirmation"
+                            ? "Avaliação já registrada"
+                            : "Problema continua"}
                       </Button>
                     </div>
+                    {userInteraction.resolutionFeedback && (
+                      <p className="mt-2 text-xs text-muted-foreground" role="status">
+                        Você já registrou sua avaliação desta resolução nesta sessão. Confirmação e contestação são mutuamente exclusivas.
+                      </p>
+                    )}
                     <div className="flex gap-4 mt-3 text-xs">
                       <p className="text-green-600 flex items-center gap-1">
                         <CheckCircle2 className="h-3 w-3" />
@@ -671,7 +739,7 @@ export function OccurrenceDetailSheet({
                     </p>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Como implementação futura, você só poderá alterar seu voto uma vez. Para mais informações, acesse a seção &quot;Ideias e Possíveis Evoluções&quot; na página de Avaliação.
+                    Você pode alterar seu voto uma única vez nesta sessão demonstrativa. A regra local não substitui a validação definitiva no servidor.
                   </p>
                 </>
               )}
