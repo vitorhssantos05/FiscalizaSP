@@ -129,14 +129,45 @@ export function RegisterPage({ onSuccess }: RegisterPageProps) {
   }
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string)
-      }
-      reader.readAsDataURL(file)
+    const input = e.currentTarget
+    const file = input.files?.[0]
+    input.value = ""
+
+    if (!file) return
+
+    const acceptedTypes = ["image/jpeg", "image/png", "image/webp"]
+    const maxFileSize = 3 * 1024 * 1024
+
+    if (!acceptedTypes.includes(file.type)) {
+      setImagePreview(null)
+      toast.error("Formato de imagem inválido", {
+        description: "Selecione uma imagem JPEG, PNG ou WebP.",
+      })
+      return
     }
+
+    if (file.size > maxFileSize) {
+      setImagePreview(null)
+      toast.error("Imagem muito grande", {
+        description: "O tamanho máximo permitido é 3 MB.",
+      })
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setImagePreview(reader.result)
+      } else {
+        setImagePreview(null)
+        toast.error("Não foi possível carregar a imagem")
+      }
+    }
+    reader.onerror = () => {
+      setImagePreview(null)
+      toast.error("Não foi possível carregar a imagem")
+    }
+    reader.readAsDataURL(file)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -300,39 +331,55 @@ export function RegisterPage({ onSuccess }: RegisterPageProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-lg p-6 hover:border-primary/50 transition-colors">
+            <div className="flex flex-col items-center justify-center gap-4 border-2 border-dashed border-border rounded-lg p-6 hover:border-primary/50 transition-colors">
               {imagePreview ? (
-                <div className="relative w-full max-w-md">
+                <div className="w-full max-w-md">
                   <img
                     src={imagePreview}
-                    alt="Preview"
-                    className="w-full h-48 object-cover rounded-lg"
+                    alt={`Prévia da imagem da ocorrência: ${title || "imagem selecionada"}`}
+                    className="max-h-64 w-full rounded-lg object-contain"
                   />
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    className="absolute top-2 right-2"
-                    onClick={() => setImagePreview(null)}
-                  >
-                    Remover
-                  </Button>
                 </div>
               ) : (
-                <label className="cursor-pointer text-center">
+                <label
+                  htmlFor="occurrence-image"
+                  className="cursor-pointer text-center"
+                >
                   <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
                     <ImageIcon className="h-6 w-6 text-muted-foreground" />
                   </div>
                   <p className="text-sm font-medium text-foreground">Clique para enviar uma imagem</p>
-                  <p className="text-xs text-muted-foreground mt-1">PNG, JPG até 5MB</p>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleImageUpload}
-                  />
                 </label>
               )}
+              <input
+                id="occurrence-image"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="sr-only"
+                aria-describedby="occurrence-image-help"
+                onChange={handleImageUpload}
+              />
+              {imagePreview && (
+                <div className="flex flex-wrap justify-center gap-2">
+                  <label
+                    htmlFor="occurrence-image"
+                    className="inline-flex cursor-pointer items-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+                  >
+                    Substituir imagem
+                  </label>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setImagePreview(null)}
+                  >
+                    Remover imagem
+                  </Button>
+                </div>
+              )}
+              <p id="occurrence-image-help" className="text-center text-xs text-muted-foreground" aria-live="polite">
+                JPEG, PNG ou WebP, até 3 MB. A imagem fica apenas nesta sessão e não será preservada após recarregar a página.
+              </p>
             </div>
           </CardContent>
         </Card>

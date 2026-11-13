@@ -25,6 +25,7 @@ import {
 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import { OccurrenceImage } from "@/components/occurrence-image"
 
 interface OccurrenceListProps {
   onViewDetails: (occurrence: Occurrence) => void
@@ -239,9 +240,14 @@ export function OccurrenceList({ onViewDetails }: OccurrenceListProps) {
               >
                 <CardContent className="p-4">
                   <div className="flex gap-4">
-                    {/* Image placeholder */}
-                    <div className="h-24 w-24 flex-shrink-0 rounded-md bg-muted flex items-center justify-center overflow-hidden">
-                      <MapPin className="h-8 w-8 text-muted-foreground" />
+                    <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-md bg-muted">
+                      <OccurrenceImage
+                        key={`${occurrence.id}-${occurrence.imageUrl ?? "sem-imagem"}`}
+                        src={occurrence.imageUrl}
+                        alt={`Imagem da ocorrência: ${occurrence.title}`}
+                        className="h-full w-full object-cover"
+                        fallbackClassName="flex h-full w-full items-center justify-center text-muted-foreground [&>svg]:size-8"
+                      />
                     </div>
                     
                     {/* Content */}

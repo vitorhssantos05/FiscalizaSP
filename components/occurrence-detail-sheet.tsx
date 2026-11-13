@@ -38,6 +38,7 @@ import {
 } from "lucide-react"
 import { formatDistanceToNow, format } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import { OccurrenceImage } from "@/components/occurrence-image"
 
 interface OccurrenceDetailSheetProps {
   occurrence: Occurrence | null
@@ -186,9 +187,14 @@ export function OccurrenceDetailSheet({
 
           <div className="flex-1 overflow-y-auto p-6 pt-4">
             <div className="space-y-6 pb-6">
-              {/* Image placeholder */}
-              <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-                <MapPin className="h-12 w-12 text-muted-foreground" />
+              <div className="aspect-video overflow-hidden rounded-lg bg-muted">
+                <OccurrenceImage
+                  key={`${occurrence.id}-${occurrence.imageUrl ?? "sem-imagem"}`}
+                  src={occurrence.imageUrl}
+                  alt={`Imagem da ocorrência: ${occurrence.title}`}
+                  className="h-full w-full object-cover"
+                  fallbackClassName="flex h-full w-full items-center justify-center text-muted-foreground [&>svg]:size-12"
+                />
               </div>
 
               {/* Badges */}
