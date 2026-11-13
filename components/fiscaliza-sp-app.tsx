@@ -6,6 +6,7 @@ import { Navigation, type Page } from "@/components/navigation"
 import { HomePage } from "@/components/home-page"
 import { ExplorePage } from "@/components/explore-page"
 import { RegisterPage } from "@/components/register-page"
+import { AdminPage } from "@/components/admin-page"
 import { EvaluationPage } from "@/components/evaluation-page"
 import { Toaster } from "@/components/ui/sonner"
 import { Button } from "@/components/ui/button"
@@ -28,6 +29,7 @@ function AppContent() {
     closeNicknameDialog,
   } = useApp()
   const [currentPage, setCurrentPage] = useState<Page>("home")
+  const [isAdminDemoMode, setIsAdminDemoMode] = useState(false)
   const [nicknameInput, setNicknameInput] = useState("")
 
   useEffect(() => {
@@ -35,6 +37,12 @@ function AppContent() {
       document.documentElement.classList.add("dark")
     }
   }, [isDarkMode])
+
+  useEffect(() => {
+    if (currentPage === "admin" && !isAdminDemoMode) {
+      setCurrentPage("home")
+    }
+  }, [currentPage, isAdminDemoMode])
 
   const renderPage = () => {
     switch (currentPage) {
@@ -44,6 +52,8 @@ function AppContent() {
         return <ExplorePage />
       case "register":
         return <RegisterPage onSuccess={() => setCurrentPage("explore")} />
+      case "admin":
+        return isAdminDemoMode ? <AdminPage /> : <HomePage onNavigate={setCurrentPage} />
       case "evaluation":
         return <EvaluationPage />
       default:
@@ -60,7 +70,12 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation currentPage={currentPage} onPageChange={setCurrentPage} />
+      <Navigation
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        isAdminDemoMode={isAdminDemoMode}
+        onAdminDemoModeChange={setIsAdminDemoMode}
+      />
       <main className="pb-16 lg:pb-0">{renderPage()}</main>
       <Dialog open={nicknameDialogOpen} onOpenChange={(open) => !open && closeNicknameDialog()}>
         <DialogContent>

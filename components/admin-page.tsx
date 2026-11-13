@@ -106,7 +106,7 @@ export function AdminPage() {
       <div className="mb-8">
         <h1 className="text-2xl md:text-3xl font-bold text-foreground">Painel Administrativo</h1>
         <p className="text-muted-foreground mt-2">
-          Gerencie e analise as ocorrências registradas na plataforma
+          Painel demonstrativo com dados locais. As alterações valem somente nesta sessão e não concedem privilégios administrativos reais.
         </p>
       </div>
 

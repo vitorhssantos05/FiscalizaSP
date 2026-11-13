@@ -3,10 +3,13 @@
 import { useApp } from "@/lib/app-context"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
@@ -16,26 +19,37 @@ import {
   Home,
   MapPin,
   PlusCircle,
+  LayoutDashboard,
   ClipboardCheck,
 } from "lucide-react"
 
-type Page = "home" | "explore" | "register" | "evaluation"
+type Page = "home" | "explore" | "register" | "admin" | "evaluation"
 
 interface NavigationProps {
   currentPage: Page
   onPageChange: (page: Page) => void
+  isAdminDemoMode: boolean
+  onAdminDemoModeChange: (enabled: boolean) => void
 }
 
 const navItems = [
   { id: "home" as Page, label: "Home", labelShort: "Home", icon: Home },
   { id: "explore" as Page, label: "Explorar Ocorrências", labelShort: "Explorar", icon: MapPin },
   { id: "register" as Page, label: "Registrar Ocorrência", labelShort: "Registrar", icon: PlusCircle },
+  { id: "admin" as Page, label: "Painel Admin", labelShort: "Admin", icon: LayoutDashboard, adminOnly: true },
   { id: "evaluation" as Page, label: "Avaliação Acadêmica", labelShort: "Avaliar", icon: ClipboardCheck },
 ]
 
-export function Navigation({ currentPage, onPageChange }: NavigationProps) {
+export function Navigation({
+  currentPage,
+  onPageChange,
+  isAdminDemoMode,
+  onAdminDemoModeChange,
+}: NavigationProps) {
   const { nickname, isDarkMode, toggleDarkMode } = useApp()
-  const visibleNavItems = navItems
+  const visibleNavItems = navItems.filter(
+    (item) => !item.adminOnly || isAdminDemoMode,
+  )
   
   // Items para a barra inferior mobile (limitado a 5)
   const mobileNavItems = visibleNavItems.slice(0, 5)
@@ -61,10 +75,12 @@ export function Navigation({ currentPage, onPageChange }: NavigationProps) {
                 variant={currentPage === item.id ? "secondary" : "ghost"}
                 size="sm"
                 onClick={() => onPageChange(item.id)}
-                className="gap-2"
+                className={`gap-2 ${item.adminOnly ? "text-primary" : ""}`}
+                aria-label={item.adminOnly ? "Painel Admin (demonstração)" : undefined}
+                title={item.adminOnly ? "Painel demonstrativo; sem privilégios administrativos reais" : undefined}
               >
                 <item.icon className="h-4 w-4" />
-                {item.label}
+                {isAdminDemoMode ? item.labelShort : item.label}
               </Button>
             ))}
           </nav>
@@ -99,7 +115,7 @@ export function Navigation({ currentPage, onPageChange }: NavigationProps) {
                   </span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuContent align="end" className="w-64">
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col gap-1">
                     <span className="text-foreground">{nickname || "Visitante"}</span>
@@ -108,6 +124,21 @@ export function Navigation({ currentPage, onPageChange }: NavigationProps) {
                     </span>
                   </div>
                 </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <div className="flex items-center justify-between gap-3 px-2 py-2">
+                  <Label htmlFor="admin-demo-mode" className="text-sm font-medium">
+                    Modo Admin (demonstração)
+                  </Label>
+                  <Switch
+                    id="admin-demo-mode"
+                    checked={isAdminDemoMode}
+                    onCheckedChange={onAdminDemoModeChange}
+                    aria-describedby="admin-demo-description"
+                  />
+                </div>
+                <p id="admin-demo-description" className="px-2 pb-2 text-xs text-muted-foreground">
+                  Acesso demonstrativo; não concede privilégios administrativos reais.
+                </p>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -125,6 +156,8 @@ export function Navigation({ currentPage, onPageChange }: NavigationProps) {
               <button
                 key={item.id}
                 onClick={() => onPageChange(item.id)}
+                aria-label={item.adminOnly ? "Painel Admin (demonstração)" : item.label}
+                title={item.adminOnly ? "Painel demonstrativo; sem privilégios administrativos reais" : undefined}
                 className={`flex flex-col items-center justify-center flex-1 h-full gap-1 transition-colors ${
                   isActive 
                     ? "text-primary" 
