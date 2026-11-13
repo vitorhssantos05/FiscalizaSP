@@ -1,493 +1,389 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState } from "react"
+import { AlertTriangle, ArrowLeft, ArrowRight, Check, ClipboardCheck, GraduationCap, LockKeyhole, ShieldCheck, X } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import {
-  GraduationCap,
-  ClipboardCheck,
-  ExternalLink,
-  Users,
-  Star,
-  Target,
-  Lightbulb,
-  CheckCircle2,
-  FlaskConical,
-  Info,
-  Layers,
-  Map,
-  Flame,
-  Trophy,
-  Building2,
-  Brain,
-  KeyRound,
-  Server,
-  Vote,
-  Bell,
-  Shield,
-  UserCheck,
-  ShieldCheck,
-  Eye,
-  Sparkles,
-  AlertTriangle,
-  MoreHorizontal,
-  Heart,
-} from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
+import { Progress } from "@/components/ui/progress"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+
+type ResearchPhase = "introduction" | "profile" | "review" | "transition" | "declined"
+type AnswerKey = "ageRange" | "smartphoneUse" | "digitalFamiliarity" | "platformExperience"
+type Answers = Record<AnswerKey, string>
+
+type Question = {
+  key: AnswerKey
+  title: string
+  description: string
+  options: { value: string; label: string }[]
+}
+
+const emptyAnswers: Answers = {
+  ageRange: "",
+  smartphoneUse: "",
+  digitalFamiliarity: "",
+  platformExperience: "",
+}
+
+const questions: Question[] = [
+  {
+    key: "ageRange",
+    title: "Qual é a sua faixa etária?",
+    description: "Não solicitamos sua data de nascimento.",
+    options: [
+      { value: "18-24", label: "18 a 24 anos" },
+      { value: "25-34", label: "25 a 34 anos" },
+      { value: "35-44", label: "35 a 44 anos" },
+      { value: "45-54", label: "45 a 54 anos" },
+      { value: "55+", label: "55 anos ou mais" },
+      { value: "prefer-not-to-say", label: "Prefiro não informar" },
+    ],
+  },
+  {
+    key: "smartphoneUse",
+    title: "Com que frequência você usa um smartphone?",
+    description: "Considere o uso no seu dia a dia.",
+    options: [
+      { value: "daily", label: "Todos os dias" },
+      { value: "weekly", label: "Algumas vezes por semana" },
+      { value: "rarely", label: "Raramente" },
+      { value: "never", label: "Não uso smartphone" },
+    ],
+  },
+  {
+    key: "digitalFamiliarity",
+    title: "Como você avalia sua familiaridade com ferramentas digitais?",
+    description: "Pense em aplicativos, sites e serviços online.",
+    options: [
+      { value: "beginner", label: "Pouco familiarizado(a)" },
+      { value: "intermediate", label: "Razoavelmente familiarizado(a)" },
+      { value: "advanced", label: "Muito familiarizado(a)" },
+    ],
+  },
+  {
+    key: "platformExperience",
+    title: "Você já usou plataformas digitais para fiscalizar ou reportar problemas urbanos?",
+    description: "Por exemplo, canais digitais para comunicar problemas de infraestrutura à cidade.",
+    options: [
+      { value: "yes", label: "Sim" },
+      { value: "no", label: "Não" },
+      { value: "unsure", label: "Não tenho certeza" },
+    ],
+  },
+]
+
+const stepLabels = ["Consentimento", "Perfil", "Revisão"]
 
 export function EvaluationPage() {
-  const mvpSimplifications = [
-    {
-      icon: KeyRound,
-      title: "Login Simulado",
-      description: "Sistema de autenticação mockado para facilitar testes",
-    },
-    {
-      icon: Vote,
-      title: "Votos Sem Limite Rígido",
-      description: "Votos colaborativos liberados para testes mais amplos",
-    },
-    {
-      icon: Shield,
-      title: "Acesso Admin Simplificado",
-      description: "Modo administrador acessível para demonstração",
-    },
-    {
-      icon: Server,
-      title: "Dados Simulados",
-      description: "Base de dados fictícia para exemplificar funcionalidades",
-    },
-    {
-      icon: Sparkles,
-      title: "Alterações Instantâneas",
-      description: "Mudanças em front-end sem persistência real",
-    },
-  ]
+  const [phase, setPhase] = useState<ResearchPhase>("introduction")
+  const [consentAccepted, setConsentAccepted] = useState(false)
+  const [answers, setAnswers] = useState<Answers>(emptyAnswers)
+  const [missingAnswers, setMissingAnswers] = useState<AnswerKey[]>([])
 
-  const futureEvolutions = [
-    {
-      icon: Layers,
-      title: "Mais Categorias Urbanas",
-      description: "Expansão das categorias de problemas reportáveis",
-    },
-    {
-      icon: Map,
-      title: "Mapas de Calor",
-      description: "Visualização de áreas com maior concentração de ocorrências",
-    },
-    {
-      icon: Trophy,
-      title: "Sistema de Incentivos",
-      description: "Pontos, rankings e recompensas por participação",
-    },
-    {
-      icon: Building2,
-      title: "Ranking por Bairro",
-      description: "Comparativo de zeladoria entre diferentes regiões",
-    },
-    {
-      icon: Brain,
-      title: "Priorização Inteligente",
-      description: "Algoritmos para ordenação automática de demandas",
-    },
-    {
-      icon: KeyRound,
-      title: "Autenticação Real",
-      description: "Sistema seguro de login e cadastro de usuários",
-    },
-    {
-      icon: Server,
-      title: "Backend Integrado",
-      description: "Infraestrutura completa para persistência de dados",
-    },
-    {
-      icon: Vote,
-      title: "Limite Inteligente de Votos",
-      description: "Controle de votos por usuário para evitar abusos",
-    },
-    {
-      icon: Heart,
-      title: "Alteração Única de Voto",
-      description: "Permitir que o usuário mude seu voto de prioridade apenas uma vez por ocorrência, caso reavalie que a urgência do problema aumentou ou diminuiu",
-    },
-    {
-      icon: Bell,
-      title: "Notificações em Tempo Real",
-      description: "Alertas sobre atualizações de ocorrências reportadas",
-    },
-    {
-      icon: Shield,
-      title: "Moderação de Conteúdo",
-      description: "Revisão e validação de denúncias antes da publicação",
-    },
-    {
-      icon: UserCheck,
-      title: "Reputação de Usuários",
-      description: "Sistema de credibilidade baseado em histórico",
-    },
-    {
-      icon: ShieldCheck,
-      title: "Validação Antifraude",
-      description: "Mecanismos para garantir autenticidade das denúncias",
-    },
-  ]
+  const clearDraft = () => {
+    setConsentAccepted(false)
+    setAnswers(emptyAnswers)
+    setMissingAnswers([])
+  }
+
+  const declineParticipation = () => {
+    clearDraft()
+    setPhase("declined")
+  }
+
+  const beginProfile = () => {
+    if (consentAccepted) setPhase("profile")
+  }
+
+  const reviewProfile = () => {
+    const unanswered = questions
+      .filter((question) => !answers[question.key])
+      .map((question) => question.key)
+    setMissingAnswers(unanswered)
+    if (unanswered.length === 0) setPhase("review")
+  }
+
+  const finishE1 = () => {
+    clearDraft()
+    setPhase("transition")
+  }
+
+  const restart = () => {
+    clearDraft()
+    setPhase("introduction")
+  }
+
+  const currentStep = phase === "introduction" ? 1 : phase === "profile" ? 2 : 3
+  const progressValue = phase === "introduction" ? 0 : phase === "profile" ? 50 : 100
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      {/* Header */}
-      <div className="text-center mb-12">
-        <Badge variant="secondary" className="mb-4">
-          <GraduationCap className="h-3 w-3 mr-1" />
-          Trabalho de Graduação Interdisciplinar
-        </Badge>
-        <h1 className="text-2xl md:text-4xl font-bold text-foreground mb-4 text-balance">
-          Avaliação Acadêmica do MVP
-        </h1>
-        <p className="text-muted-foreground max-w-2xl mx-auto text-pretty leading-relaxed">
-          Sua opinião é fundamental para o sucesso deste projeto acadêmico. 
-          Ao responder nosso questionário, você contribui diretamente para a 
-          validação e aprimoramento da plataforma.
-        </p>
-      </div>
+    <section className="container mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8 md:py-12" aria-labelledby="research-title">
+      <header className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Badge variant="secondary" className="gap-1.5 px-3 py-1">
+            <GraduationCap aria-hidden="true" />
+            Pesquisa acadêmica · TGI-II
+          </Badge>
+          {phase !== "declined" && phase !== "transition" && (
+            <span className="text-sm text-muted-foreground">Etapa E1 de 5</span>
+          )}
+        </div>
+        <div>
+          <h1 id="research-title" className="text-balance text-3xl font-bold tracking-tight md:text-4xl">
+            Pesquisa de experiência cidadã
+          </h1>
+          <p className="mt-2 max-w-2xl text-pretty leading-relaxed text-muted-foreground">
+            Queremos compreender o perfil geral de quem utiliza ferramentas digitais e sua experiência com fiscalização urbana.
+          </p>
+        </div>
+      </header>
 
-      {/* Main CTA Card */}
-      <Card className="mb-12 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-        <CardContent className="p-8 text-center">
-          <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <ClipboardCheck className="h-8 w-8 text-primary" />
+      {phase !== "declined" && phase !== "transition" && (
+        <div className="flex flex-col gap-3" aria-label={`Etapa ${currentStep} de 3: ${stepLabels[currentStep - 1]}`}>
+          <div className="flex items-center justify-between gap-2 text-xs font-medium sm:text-sm">
+            {stepLabels.map((label, index) => {
+              const step = index + 1
+              const isComplete = step < currentStep || (step === 1 && consentAccepted && phase !== "introduction")
+              const isCurrent = step === currentStep
+              return (
+                <span key={label} className={isCurrent || isComplete ? "text-primary" : "text-muted-foreground"}>
+                  <span className="mr-1.5 inline-flex size-6 items-center justify-center rounded-full border text-xs">
+                    {isComplete ? <Check aria-hidden="true" className="size-3.5" /> : step}
+                  </span>
+                  {label}
+                </span>
+              )
+            })}
           </div>
-          <h2 className="text-xl md:text-2xl font-bold mb-3 text-foreground">
-            Questionário de Avaliação de Usabilidade
-          </h2>
-          <p className="text-muted-foreground mb-6 max-w-md mx-auto text-pretty">
-            O questionário leva aproximadamente 5 minutos para ser respondido e 
-            suas respostas são anônimas.
-          </p>
-          <Button size="lg" asChild className="gap-2">
-            <a
-              href="https://docs.google.com/forms/d/e/1FAIpQLSf4KuJWMyJqniSdxqHHyJsi6UnduaqN7yLEyt4c72LqB3BU9w/viewform?usp=header"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <ExternalLink className="h-5 w-5" />
-              Responder Questionário de Avaliação
-            </a>
-          </Button>
-          <p className="text-xs text-muted-foreground mt-4">
-            O link abrirá em uma nova aba (Google Forms)
-          </p>
-        </CardContent>
-      </Card>
+          <Progress value={progressValue} aria-label="Progresso da pesquisa" />
+        </div>
+      )}
 
-      {/* NEW SECTION: Sobre Este MVP */}
-      <Card className="mb-8 border-accent/30 bg-gradient-to-br from-accent/5 to-transparent">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FlaskConical className="h-5 w-5 text-accent" />
-            Sobre Este MVP
-          </CardTitle>
-          <CardDescription>
-            Entenda o contexto experimental desta plataforma
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* O que é MVP */}
-          <div className="p-4 rounded-lg bg-muted/50 border border-border/50">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0">
-                <Info className="h-5 w-5 text-accent" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-foreground mb-1">O que é um MVP?</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  <strong>MVP</strong> significa <strong>Produto Mínimo Viável</strong> (Minimum Viable Product). 
-                  É uma versão simplificada de um produto desenvolvida para validar conceitos e coletar 
-                  feedback antes de investir em uma implementação completa.
-                </p>
-              </div>
+      {phase === "introduction" && (
+        <Card>
+          <CardHeader>
+            <div className="mb-2 flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <ClipboardCheck aria-hidden="true" className="size-6" />
             </div>
-          </div>
-
-          {/* Objetivo do MVP */}
-          <div className="space-y-3">
-            <h3 className="font-semibold text-foreground flex items-center gap-2">
-              <Target className="h-4 w-4 text-primary" />
-              Objetivo Principal
-            </h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Este sistema é um <strong>MVP acadêmico</strong> cujo objetivo principal é 
-              <strong> validar o conceito da plataforma</strong> de fiscalização cidadã. 
-              Esta versão foi simplificada intencionalmente para permitir:
+            <CardTitle>Sobre esta pesquisa</CardTitle>
+            <CardDescription>Leia as informações antes de decidir se deseja participar.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-5">
+            <p className="leading-relaxed text-muted-foreground">
+              Esta pesquisa acadêmica busca entender como as pessoas se relacionam com ferramentas digitais de participação cidadã e fiscalização da infraestrutura urbana. As respostas deste protótipo são apenas demonstrativas e não serão enviadas nem armazenadas.
             </p>
-            <ul className="grid gap-2 md:grid-cols-2 text-sm">
-              <li className="flex items-center gap-2 text-muted-foreground">
-                <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
-                Testes de usabilidade
-              </li>
-              <li className="flex items-center gap-2 text-muted-foreground">
-                <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
-                Demonstração acadêmica
-              </li>
-              <li className="flex items-center gap-2 text-muted-foreground">
-                <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
-                Coleta de feedback
-              </li>
-              <li className="flex items-center gap-2 text-muted-foreground">
-                <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
-                Validação conceitual
-              </li>
-            </ul>
-          </div>
-
-          {/* Aviso de Transparência */}
-          <div className="p-4 rounded-lg bg-warning/10 border border-warning/30">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
-              <div>
-                <h3 className="font-semibold text-foreground mb-2">Transparência sobre Funcionalidades</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed mb-3">
-                  Por se tratar de um protótipo acadêmico, algumas funcionalidades estão 
-                  <strong> simuladas</strong> ou <strong>simplificadas</strong>. 
-                  Certos comportamentos foram liberados propositalmente para permitir testes mais amplos, 
-                  e nem todas as regras de um sistema real foram implementadas nesta etapa.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Cards de Simplificações */}
-          <div className="space-y-3">
-            <h3 className="font-semibold text-foreground text-sm">Exemplos de simplificações neste MVP:</h3>
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {mvpSimplifications.map((item) => (
-                <div
-                  key={item.title}
-                  className="p-3 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors"
-                >
-                  <item.icon className="h-4 w-4 text-muted-foreground mb-2" />
-                  <h4 className="font-medium text-xs text-foreground mb-1">{item.title}</h4>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{item.description}</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="flex gap-3 rounded-lg border bg-muted/30 p-4">
+                <ShieldCheck aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" />
+                <div>
+                  <h2 className="font-medium">Participação voluntária</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">Você decide se quer participar e pode desistir a qualquer momento, sem qualquer prejuízo.</p>
                 </div>
-              ))}
-              {/* Card Outros */}
-              <div className="p-3 rounded-lg bg-muted/30 border border-dashed border-border hover:bg-muted/50 transition-colors">
-                <MoreHorizontal className="h-4 w-4 text-muted-foreground mb-2" />
-                <h4 className="font-medium text-xs text-foreground mb-1">Outros</h4>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Existem outras simplificações não listadas aqui que foram aplicadas para viabilizar este MVP no contexto acadêmico
+              </div>
+              <div className="flex gap-3 rounded-lg border bg-muted/30 p-4">
+                <LockKeyhole aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" />
+                <div>
+                  <h2 className="font-medium">Sem identificação pessoal</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">Não pedimos nome, e-mail, endereço ou outros dados que identifiquem você.</p>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-lg border p-4">
+              <h2 className="font-medium">O que acontece nesta etapa?</h2>
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                Você responderá perguntas gerais de perfil, poderá revisar as respostas e então verá uma mensagem sobre as próximas etapas. Não há coleta oficial de dados nem tarefas guiadas nesta versão.
+              </p>
+            </div>
+            <div className="flex items-start gap-3 rounded-lg border p-4">
+              <Checkbox
+                id="research-consent"
+                checked={consentAccepted}
+                onCheckedChange={(checked) => setConsentAccepted(checked === true)}
+                aria-describedby="consent-description"
+              />
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="research-consent" className="cursor-pointer leading-relaxed">
+                  Li as informações e aceito participar voluntariamente desta etapa demonstrativa.
+                </Label>
+                <p id="consent-description" className="text-sm text-muted-foreground">
+                  O consentimento é necessário para continuar. Você pode desistir depois e descartar as respostas provisórias.
                 </p>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+          <CardFooter className="flex flex-col-reverse gap-3 border-t pt-6 sm:flex-row sm:justify-between">
+            <Button type="button" variant="ghost" onClick={declineParticipation}>
+              <X data-icon="inline-start" />
+              Não desejo participar
+            </Button>
+            <Button type="button" onClick={beginProfile} disabled={!consentAccepted}>
+              Continuar para o perfil
+              <ArrowRight data-icon="inline-end" />
+            </Button>
+          </CardFooter>
+        </Card>
+      )}
 
-      {/* Importance Section (existing - complemented) */}
-      <Card className="mb-8 border-border/50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Por que sua avaliação é importante?
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-muted-foreground leading-relaxed text-pretty">
-            Este MVP (Produto Mínimo Viável) faz parte de um Trabalho de Graduação 
-            Interdisciplinar (TGI) que visa desenvolver uma solução tecnológica para 
-            promover a participação cidadã na fiscalização da infraestrutura urbana.
-          </p>
-          <p className="text-muted-foreground leading-relaxed text-pretty">
-            A avaliação de usabilidade é uma etapa crucial do desenvolvimento, pois permite:
-          </p>
-          <ul className="space-y-2 text-muted-foreground">
-            <li className="flex items-start gap-2">
-              <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-              <span>Identificar pontos fortes e áreas de melhoria na interface</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-              <span>Validar se a plataforma atende às necessidades dos usuários</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-              <span>Coletar dados para fundamentação científica do projeto</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-              <span>Contribuir para pesquisas em Smart Cities e participação cidadã</span>
-            </li>
-          </ul>
-        </CardContent>
-      </Card>
-
-      {/* NEW SECTION: Objetivo da Avaliação */}
-      <Card className="mb-8 border-border/50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Eye className="h-5 w-5" />
-            Objetivo da Avaliação
-          </CardTitle>
-          <CardDescription>
-            O que esperamos analisar com sua participação
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-muted-foreground leading-relaxed text-pretty">
-            O objetivo desta avaliação é analisar diversos aspectos da plataforma para 
-            compreender como os usuários interagem com o sistema e identificar oportunidades 
-            de melhoria. Especificamente, buscamos avaliar:
-          </p>
-          
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
-              <Target className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-              <div>
-                <h4 className="font-medium text-sm text-foreground">Experiência de Uso</h4>
-                <p className="text-xs text-muted-foreground">Como é navegar e utilizar a plataforma</p>
-              </div>
+      {phase === "profile" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Perfil geral</CardTitle>
+            <CardDescription>As perguntas são sobre características gerais. Nenhuma resposta identifica você.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-7">
+            {questions.map((question, index) => {
+              const isMissing = missingAnswers.includes(question.key)
+              const errorId = `${question.key}-error`
+              return (
+                <fieldset key={question.key} className="flex min-w-0 flex-col gap-3" aria-describedby={isMissing ? errorId : undefined}>
+                  <legend className="font-medium leading-relaxed">
+                    {index + 1}. {question.title}
+                    <span className="sr-only"> Obrigatória</span>
+                  </legend>
+                  <p className="-mt-2 text-sm text-muted-foreground">{question.description}</p>
+                  <RadioGroup
+                    value={answers[question.key]}
+                    onValueChange={(value) => {
+                      setAnswers((current) => ({ ...current, [question.key]: value }))
+                      setMissingAnswers((current) => current.filter((key) => key !== question.key))
+                    }}
+                    aria-invalid={isMissing}
+                    aria-describedby={isMissing ? errorId : undefined}
+                    className="grid gap-2 sm:grid-cols-2"
+                  >
+                    {question.options.map((option) => {
+                      const inputId = `${question.key}-${option.value}`
+                      return (
+                        <Label
+                          key={option.value}
+                          htmlFor={inputId}
+                          className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 font-normal transition-colors hover:bg-accent/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5"
+                        >
+                          <RadioGroupItem id={inputId} value={option.value} aria-label={option.label} />
+                          <span>{option.label}</span>
+                        </Label>
+                      )
+                    })}
+                  </RadioGroup>
+                  {isMissing && <p id={errorId} className="text-sm text-destructive">Selecione uma opção para continuar.</p>}
+                </fieldset>
+              )
+            })}
+          </CardContent>
+          <CardFooter className="flex flex-col-reverse gap-3 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
+            <Button type="button" variant="outline" onClick={() => setPhase("introduction")}>
+              <ArrowLeft data-icon="inline-start" />
+              Voltar
+            </Button>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+              <Button type="button" variant="ghost" onClick={declineParticipation}>
+                Desistir e descartar
+              </Button>
+              <Button type="button" onClick={reviewProfile}>
+                Revisar respostas
+                <ArrowRight data-icon="inline-end" />
+              </Button>
             </div>
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
-              <Star className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-              <div>
-                <h4 className="font-medium text-sm text-foreground">Clareza da Interface</h4>
-                <p className="text-xs text-muted-foreground">Se os elementos são compreensíveis</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
-              <Layers className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-              <div>
-                <h4 className="font-medium text-sm text-foreground">Organização das Informações</h4>
-                <p className="text-xs text-muted-foreground">Como os dados estão estruturados</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
-              <Lightbulb className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-              <div>
-                <h4 className="font-medium text-sm text-foreground">Percepção de Utilidade</h4>
-                <p className="text-xs text-muted-foreground">Se a plataforma parece útil e relevante</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
-              <Brain className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-              <div>
-                <h4 className="font-medium text-sm text-foreground">Compreensão das Funcionalidades</h4>
-                <p className="text-xs text-muted-foreground">Se as funções são intuitivas</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
-              <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-              <div>
-                <h4 className="font-medium text-sm text-foreground">Experiência Geral</h4>
-                <p className="text-xs text-muted-foreground">Satisfação global com a plataforma</p>
-              </div>
-            </div>
-          </div>
+          </CardFooter>
+        </Card>
+      )}
 
-          <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 mt-4">
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              <strong className="text-foreground">Ao avaliar, considere:</strong> o contexto de MVP acadêmico, 
-              a natureza exploratória do sistema e o foco na validação inicial da proposta. 
-              Seu feedback honesto e construtivo é essencial para o sucesso deste projeto.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-
-
-      {/* NEW SECTION: Ideias e Possíveis Evoluções */}
-      <Card className="mb-8 border-border/50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5" />
-            Ideias e Possíveis Evoluções
-          </CardTitle>
-          <CardDescription>
-            Reflexões e possibilidades identificadas durante o desenvolvimento
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              As funcionalidades listadas abaixo representam <strong>reflexões e possibilidades</strong> levantadas 
-              durante o desenvolvimento do artigo e do MVP. É importante ressaltar que estas ideias 
-              <strong> não necessariamente serão implementadas futuramente</strong>, servindo como uma 
-              <strong> análise exploratória</strong> e visão de evolução potencial da plataforma.
-            </p>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {futureEvolutions.map((evolution) => (
-              <div
-                key={evolution.title}
-                className="group p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/20 border border-border/50 hover:border-primary/30 hover:from-primary/5 hover:to-transparent transition-all duration-300"
-              >
-                <div className="w-10 h-10 rounded-lg bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center mb-3 transition-colors">
-                  <evolution.icon className="h-5 w-5 text-primary" />
+      {phase === "review" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Revise suas respostas</CardTitle>
+            <CardDescription>Confira o perfil antes de encerrar esta etapa demonstrativa. Nada será enviado.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            {questions.map((question) => {
+              const selectedOption = question.options.find((option) => option.value === answers[question.key])
+              return (
+                <div key={question.key} className="flex flex-col gap-1 rounded-lg border p-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+                  <h2 className="text-sm font-medium leading-relaxed">{question.title}</h2>
+                  <p className="shrink-0 text-sm text-primary sm:text-right">{selectedOption?.label}</p>
                 </div>
-                <h3 className="font-semibold text-sm text-foreground mb-1">{evolution.title}</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">{evolution.description}</p>
-              </div>
-            ))}
-          </div>
+              )
+            })}
+            <Alert className="mt-2">
+              <LockKeyhole aria-hidden="true" />
+              <AlertTitle>Respostas apenas nesta sessão</AlertTitle>
+              <AlertDescription>Elas permanecem somente na memória desta página e serão descartadas ao concluir ou desistir.</AlertDescription>
+            </Alert>
+          </CardContent>
+          <CardFooter className="flex flex-col-reverse gap-3 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
+            <Button type="button" variant="outline" onClick={() => setPhase("profile")}>
+              <ArrowLeft data-icon="inline-start" />
+              Editar respostas
+            </Button>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+              <Button type="button" variant="ghost" onClick={declineParticipation}>
+                Desistir e descartar
+              </Button>
+              <Button type="button" onClick={finishE1}>
+                Concluir etapa E1
+                <Check data-icon="inline-end" />
+              </Button>
+            </div>
+          </CardFooter>
+        </Card>
+      )}
 
-          <p className="text-xs text-muted-foreground text-center pt-2">
-            Estas ideias refletem o potencial de expansão identificado durante a pesquisa acadêmica.
-          </p>
-        </CardContent>
-      </Card>
+      {phase === "transition" && (
+        <Card>
+          <CardHeader>
+            <div className="mb-2 flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Check aria-hidden="true" className="size-6" />
+            </div>
+            <CardTitle>Etapa E1 concluída</CardTitle>
+            <CardDescription>Obrigado por conhecer esta etapa demonstrativa do FiscalizaSP.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <Alert>
+              <AlertTriangle aria-hidden="true" />
+              <AlertTitle>As próximas etapas ainda não estão disponíveis</AlertTitle>
+              <AlertDescription>As tarefas guiadas de avaliação serão implementadas posteriormente. Nenhuma resposta foi enviada ou armazenada; os dados provisórios já foram descartados.</AlertDescription>
+            </Alert>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Esta versão não inicia uma coleta oficial de dados e não deve ser usada como instrumento de pesquisa com participantes reais.
+            </p>
+          </CardContent>
+          <CardFooter className="border-t pt-6">
+            <Button type="button" variant="outline" onClick={restart}>
+              Voltar ao início da apresentação
+            </Button>
+          </CardFooter>
+        </Card>
+      )}
 
-      {/* Academic Context (existing) */}
-      <Card className="border-border/50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <GraduationCap className="h-5 w-5" />
-            Contexto Acadêmico
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="p-4 rounded-lg bg-muted/50">
-              <h3 className="font-medium text-sm text-foreground mb-1">Projeto</h3>
-              <p className="text-sm text-muted-foreground">
-                Plataforma Digital para Apoio à Fiscalização Cidadã da Infraestrutura Urbana
-              </p>
+      {phase === "declined" && (
+        <Card>
+          <CardHeader>
+            <div className="mb-2 flex size-12 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+              <X aria-hidden="true" className="size-6" />
             </div>
-            <div className="p-4 rounded-lg bg-muted/50">
-              <h3 className="font-medium text-sm text-foreground mb-1">Modalidade</h3>
-              <p className="text-sm text-muted-foreground">
-                Trabalho de Graduação Interdisciplinar (TGI 1)
-              </p>
-            </div>
-            <div className="p-4 rounded-lg bg-muted/50">
-              <h3 className="font-medium text-sm text-foreground mb-1">Área de Pesquisa</h3>
-              <p className="text-sm text-muted-foreground">
-                Smart Cities, Participação Cidadã, Tecnologia Cívica
-              </p>
-            </div>
-            <div className="p-4 rounded-lg bg-muted/50">
-              <h3 className="font-medium text-sm text-foreground mb-1">Ano</h3>
-              <p className="text-sm text-muted-foreground">2026</p>
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground text-center pt-4">
-            Todas as respostas são anônimas e serão utilizadas exclusivamente para fins acadêmicos.
-          </p>
-        </CardContent>
-      </Card>
+            <CardTitle>Participação encerrada</CardTitle>
+            <CardDescription>Sua decisão foi respeitada. Nenhuma resposta provisória foi mantida.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Você pode retornar à apresentação sem compromisso. A pesquisa é voluntária e não há qualquer prejuízo por não participar ou desistir.
+            </p>
+          </CardContent>
+          <CardFooter className="border-t pt-6">
+            <Button type="button" variant="outline" onClick={restart}>
+              Voltar à apresentação
+            </Button>
+          </CardFooter>
+        </Card>
+      )}
 
-      {/* Bottom CTA */}
-      <div className="text-center mt-12">
-        <Button size="lg" asChild className="gap-2">
-          <a
-            href="https://docs.google.com/forms/d/e/1FAIpQLSf4KuJWMyJqniSdxqHHyJsi6UnduaqN7yLEyt4c72LqB3BU9w/viewform?usp=header"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <ExternalLink className="h-5 w-5" />
-            Responder Questionário
-          </a>
-        </Button>
-      </div>
-    </div>
+      <p className="text-center text-xs leading-relaxed text-muted-foreground">
+        Protótipo demonstrativo · Sem conexão com banco de dados · Sem coleta ou envio de respostas
+      </p>
+    </section>
   )
 }
