@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { AlertTriangle, ArrowLeft, ArrowRight, Check, ClipboardCheck, GraduationCap, LockKeyhole, ShieldCheck, X } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -10,8 +10,10 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { AppProvider } from "@/lib/app-context"
+import { GuidedCitizenTasks, type GuidedTaskSummary } from "@/components/guided-citizen-tasks"
 
-type ResearchPhase = "introduction" | "profile" | "review" | "transition" | "declined"
+type ResearchPhase = "introduction" | "profile" | "review" | "transition" | "tasks" | "completed" | "declined"
 type AnswerKey = "ageRange" | "smartphoneUse" | "digitalFamiliarity" | "platformExperience"
 type Answers = Record<AnswerKey, string>
 
@@ -83,6 +85,11 @@ export function EvaluationPage() {
   const [consentAccepted, setConsentAccepted] = useState(false)
   const [answers, setAnswers] = useState<Answers>(emptyAnswers)
   const [missingAnswers, setMissingAnswers] = useState<AnswerKey[]>([])
+  const [taskSummary, setTaskSummary] = useState<GuidedTaskSummary | null>(null)
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [phase])
 
   const clearDraft = () => {
     setConsentAccepted(false)
@@ -107,14 +114,31 @@ export function EvaluationPage() {
     if (unanswered.length === 0) setPhase("review")
   }
 
-  const finishE1 = () => {
+  const finishE1 = () => setPhase("transition")
+
+  const finishE2 = (summary: GuidedTaskSummary) => {
     clearDraft()
-    setPhase("transition")
+    setTaskSummary(summary)
+    setPhase("completed")
+  }
+
+  const abandonE2 = () => {
+    clearDraft()
+    setPhase("declined")
   }
 
   const restart = () => {
     clearDraft()
+    setTaskSummary(null)
     setPhase("introduction")
+  }
+
+  if (phase === "tasks") {
+    return (
+      <AppProvider initialNickname="Participante">
+        <GuidedCitizenTasks onFinish={finishE2} onAbandon={abandonE2} />
+      </AppProvider>
+    )
   }
 
   const currentStep = phase === "introduction" ? 1 : phase === "profile" ? 2 : 3
@@ -128,7 +152,7 @@ export function EvaluationPage() {
             <GraduationCap aria-hidden="true" />
             Pesquisa acadêmica · TGI-II
           </Badge>
-          {phase !== "declined" && phase !== "transition" && (
+          {phase !== "declined" && phase !== "transition" && phase !== "completed" && (
             <span className="text-sm text-muted-foreground">Etapa E1 de 5</span>
           )}
         </div>
@@ -195,7 +219,7 @@ export function EvaluationPage() {
             <div className="rounded-lg border p-4">
               <h2 className="font-medium">O que acontece nesta etapa?</h2>
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                Você responderá perguntas gerais de perfil, poderá revisar as respostas e então verá uma mensagem sobre as próximas etapas. Não há coleta oficial de dados nem tarefas guiadas nesta versão.
+                Você responderá perguntas gerais de perfil, revisará suas respostas e depois poderá realizar cinco tarefas cidadãs com dados demonstrativos isolados. Nenhuma resposta ou interação será enviada nem preservada fora desta sessão; não há coleta oficial de dados.
               </p>
             </div>
             <div className="flex items-start gap-3 rounded-lg border p-4">
@@ -311,7 +335,7 @@ export function EvaluationPage() {
             <Alert className="mt-2">
               <LockKeyhole aria-hidden="true" />
               <AlertTitle>Respostas apenas nesta sessão</AlertTitle>
-              <AlertDescription>Elas permanecem somente na memória desta página e serão descartadas ao concluir ou desistir.</AlertDescription>
+              <AlertDescription>Elas permanecem somente na memória do navegador e serão descartadas ao concluir a avaliação ou desistir.</AlertDescription>
             </Alert>
           </CardContent>
           <CardFooter className="flex flex-col-reverse gap-3 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
@@ -344,11 +368,45 @@ export function EvaluationPage() {
           <CardContent className="flex flex-col gap-4">
             <Alert>
               <AlertTriangle aria-hidden="true" />
-              <AlertTitle>As próximas etapas ainda não estão disponíveis</AlertTitle>
-              <AlertDescription>As tarefas guiadas de avaliação serão implementadas posteriormente. Nenhuma resposta foi enviada ou armazenada; os dados provisórios já foram descartados.</AlertDescription>
+              <AlertTitle>Ambiente demonstrativo e isolado</AlertTitle>
+              <AlertDescription>As respostas de perfil permanecem somente na memória do navegador. As tarefas seguintes usam dados de teste isolados e nenhuma interação será enviada ou misturada à navegação pública.</AlertDescription>
             </Alert>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              Esta versão não inicia uma coleta oficial de dados e não deve ser usada como instrumento de pesquisa com participantes reais.
+              Esta avaliação é demonstrativa; não inicia uma coleta oficial de dados nem deve ser usada como instrumento de pesquisa com participantes reais.
+            </p>
+          </CardContent>
+          <CardFooter className="flex flex-col-reverse gap-2 border-t pt-6 sm:flex-row sm:justify-between">
+            <Button type="button" variant="ghost" onClick={declineParticipation}>
+              Desistir e descartar dados
+            </Button>
+            <Button type="button" onClick={() => setPhase("tasks")}>
+              Iniciar tarefas cidadãs (E2)
+              <ArrowRight data-icon="inline-end" />
+            </Button>
+          </CardFooter>
+        </Card>
+      )}
+
+      {phase === "completed" && (
+        <Card>
+          <CardHeader>
+            <div className="mb-2 flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Check aria-hidden="true" className="size-6" />
+            </div>
+            <CardTitle>Avaliação demonstrativa concluída</CardTitle>
+            <CardDescription>Obrigado por participar das etapas E1 e E2 do protótipo.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <p className="text-sm text-muted-foreground">
+              Tarefas concluídas: {taskSummary?.completed ?? 0} · Puladas: {taskSummary?.skipped ?? 0}.
+            </p>
+            <Alert>
+              <LockKeyhole aria-hidden="true" />
+              <AlertTitle>Dados de teste descartados</AlertTitle>
+              <AlertDescription>Nenhuma ocorrência, comentário, apoio ou voto desta avaliação foi publicado ou preservado.</AlertDescription>
+            </Alert>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              As tarefas administrativas da E3, o questionário da E4 e a coleta de métricas da E5 serão desenvolvidos posteriormente.
             </p>
           </CardContent>
           <CardFooter className="border-t pt-6">

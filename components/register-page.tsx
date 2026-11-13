@@ -40,9 +40,11 @@ const MapComponent = dynamic(
 
 interface RegisterPageProps {
   onSuccess?: () => void
+  demoMode?: boolean
+  onResearchError?: () => void
 }
 
-export function RegisterPage({ onSuccess }: RegisterPageProps) {
+export function RegisterPage({ onSuccess, demoMode = false, onResearchError }: RegisterPageProps) {
   const { addOccurrence, requestNickname } = useApp()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -175,18 +177,22 @@ export function RegisterPage({ onSuccess }: RegisterPageProps) {
 
     // Validation
     if (!title.trim()) {
+      onResearchError?.()
       toast.error("Preencha o título da ocorrência")
       return
     }
     if (!description.trim()) {
+      onResearchError?.()
       toast.error("Preencha a descrição da ocorrência")
       return
     }
     if (!category) {
+      onResearchError?.()
       toast.error("Selecione uma categoria")
       return
     }
     if (!selectedLocation) {
+      onResearchError?.()
       toast.error("Selecione a localização no mapa")
       return
     }
@@ -209,8 +215,10 @@ export function RegisterPage({ onSuccess }: RegisterPageProps) {
           imageUrl: imagePreview || undefined,
         })
 
-        toast.success("Ocorrência registrada com sucesso!", {
-          description: "Sua denúncia foi adicionada ao sistema",
+        toast.success(demoMode ? "Ocorrência de teste registrada" : "Ocorrência registrada com sucesso!", {
+          description: demoMode
+            ? "Adicionada somente à sessão demonstrativa desta avaliação."
+            : "Sua denúncia foi adicionada ao sistema",
         })
 
         setTitle("")
@@ -239,7 +247,7 @@ export function RegisterPage({ onSuccess }: RegisterPageProps) {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-8">
         {/* Basic Info */}
         <Card className="border-border/50">
           <CardHeader>
@@ -393,30 +401,36 @@ export function RegisterPage({ onSuccess }: RegisterPageProps) {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-2">
-              <div className="flex-1">
-                <Input
-                  placeholder="Digite o endereço (ex: Av. Paulista, 1000)"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault()
-                      handleAddressSearch()
-                    }
-                  }}
-                />
+            {demoMode ? (
+              <p className="text-sm text-muted-foreground">
+                Selecione um ponto fictício diretamente no mapa. A busca de endereços e o GPS ficam desativados nesta tarefa.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <div className="flex-1">
+                  <Input
+                    placeholder="Digite o endereço (ex: Av. Paulista, 1000)"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.nativeEvent.isComposing && e.keyCode !== 229) {
+                        e.preventDefault()
+                        handleAddressSearch()
+                      }
+                    }}
+                  />
+                </div>
+                <Button type="button" variant="secondary" onClick={handleAddressSearch}>
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Buscar
+                </Button>
+                <Button type="button" variant="outline" onClick={handleUseMyLocation}>
+                  <Navigation className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">Minha localização</span>
+                  <span className="sm:hidden">GPS</span>
+                </Button>
               </div>
-              <Button type="button" variant="secondary" onClick={handleAddressSearch}>
-                <MapPin className="h-4 w-4 mr-2" />
-                Buscar
-              </Button>
-              <Button type="button" variant="outline" onClick={handleUseMyLocation}>
-                <Navigation className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Minha localização</span>
-                <span className="sm:hidden">GPS</span>
-              </Button>
-            </div>
+            )}
 
             {neighborhood && (
               <p className="text-sm text-muted-foreground">
@@ -464,7 +478,7 @@ export function RegisterPage({ onSuccess }: RegisterPageProps) {
             ) : (
               <>
                 <CheckCircle2 className="h-5 w-5" />
-                Registrar Ocorrência
+                {demoMode ? "Registrar ocorrência de teste" : "Registrar Ocorrência"}
               </>
             )}
           </Button>

@@ -40,16 +40,25 @@ import { formatDistanceToNow, format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { OccurrenceImage } from "@/components/occurrence-image"
 
+export type ResearchAction =
+  | "occurrence-opened"
+  | "comment-added"
+  | "support-added"
+  | "priority-voted"
+  | "interaction-error"
+
 interface OccurrenceDetailSheetProps {
   occurrence: Occurrence | null
   open: boolean
   onOpenChange: (open: boolean) => void
+  onResearchAction?: (action: ResearchAction) => void
 }
 
 export function OccurrenceDetailSheet({
   occurrence,
   open,
   onOpenChange,
+  onResearchAction,
 }: OccurrenceDetailSheetProps) {
   const {
     requestNickname,
@@ -96,10 +105,12 @@ export function OccurrenceDetailSheet({
     requestNickname(() => {
       const supported = supportOccurrence(occurrence.id)
       if (!supported) {
+        onResearchAction?.("interaction-error")
         toast.info("Você já apoiou esta ocorrência nesta sessão.")
         return
       }
 
+      onResearchAction?.("support-added")
       toast.success("Você apoiou esta ocorrência!", {
         description: `${occurrence.supports + 1} pessoas apoiam este problema`,
       })
@@ -110,10 +121,12 @@ export function OccurrenceDetailSheet({
   const initiateVote = (priority: Priority) => {
     const existingVote = getUserVote(occurrence.id)
     if (existingVote?.priority === priority) {
+      onResearchAction?.("interaction-error")
       toast.info(`Seu voto já está definido como prioridade ${priorityLabels[priority]}.`)
       return
     }
     if (existingVote && !canChangeVote(occurrence.id)) {
+      onResearchAction?.("interaction-error")
       toast.warning("Você já usou a única alteração de voto permitida nesta sessão.")
       return
     }
@@ -121,6 +134,7 @@ export function OccurrenceDetailSheet({
     requestNickname(() => {
       const latestVote = getUserVote(occurrence.id)
       if (latestVote && !canChangeVote(occurrence.id)) {
+        onResearchAction?.("interaction-error")
         toast.warning("Você já usou a única alteração de voto permitida nesta sessão.")
         return
       }
@@ -136,12 +150,15 @@ export function OccurrenceDetailSheet({
     if (pendingVotePriority) {
       const recorded = voteOnPriority(occurrence.id, pendingVotePriority)
       if (!recorded) {
+        onResearchAction?.("interaction-error")
         toast.warning("Este voto não pode ser alterado novamente nesta sessão.")
       } else if (isChangingVote) {
+        onResearchAction?.("priority-voted")
         toast.success("Voto alterado!", {
           description: `Seu voto foi alterado para prioridade ${priorityLabels[pendingVotePriority]}.`,
         })
       } else {
+        onResearchAction?.("priority-voted")
         toast.success("Voto Consciente registrado!", {
           description: `Você votou para prioridade ${priorityLabels[pendingVotePriority]}.`,
         })
@@ -195,20 +212,28 @@ export function OccurrenceDetailSheet({
     const wasAlreadySubmitted =
       lastSubmittedComment.current?.occurrenceId === occurrence.id &&
       lastSubmittedComment.current.message === message
-    if (!message || wasAlreadySubmitted) return
+    if (!message || wasAlreadySubmitted) {
+      onResearchAction?.("interaction-error")
+      return
+    }
 
     requestNickname(() => {
       const wasAlreadySubmitted =
         lastSubmittedComment.current?.occurrenceId === occurrence.id &&
         lastSubmittedComment.current.message === message
-      if (wasAlreadySubmitted) return
+      if (wasAlreadySubmitted) {
+        onResearchAction?.("interaction-error")
+        return
+      }
 
       try {
         addComment(occurrence.id, message)
+        onResearchAction?.("comment-added")
         lastSubmittedComment.current = { occurrenceId: occurrence.id, message }
         setNewComment("")
         toast.success("Comentário adicionado!")
       } catch {
+        onResearchAction?.("interaction-error")
         toast.error("Não foi possível publicar o comentário. Tente novamente.")
       }
     })

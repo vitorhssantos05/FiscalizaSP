@@ -76,12 +76,18 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
 
-export function AppProvider({ children }: { children: ReactNode }) {
+export function AppProvider({
+  children,
+  initialNickname = null,
+}: {
+  children: ReactNode
+  initialNickname?: string | null
+}) {
   // This in-memory label is temporary and must never be treated as authentication.
-  const [nickname, setNickname] = useState<string | null>(null)
+  const [nickname, setNickname] = useState<string | null>(initialNickname)
   const [nicknameDialogOpen, setNicknameDialogOpen] = useState(false)
   const pendingNicknameAction = useRef<(() => void) | null>(null)
-  const nicknameRef = useRef<string | null>(null)
+  const nicknameRef = useRef<string | null>(initialNickname)
 
   const requestNickname = useCallback((action: () => void) => {
     if (nickname) {

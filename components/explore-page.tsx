@@ -5,7 +5,7 @@ import dynamic from "next/dynamic"
 import { useApp } from "@/lib/app-context"
 import type { Occurrence } from "@/lib/types"
 import { OccurrenceList } from "@/components/occurrence-list"
-import { OccurrenceDetailSheet } from "@/components/occurrence-detail-sheet"
+import { OccurrenceDetailSheet, type ResearchAction } from "@/components/occurrence-detail-sheet"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -27,9 +27,14 @@ const MapComponent = dynamic(
   }
 )
 
-export function ExplorePage() {
+interface ExplorePageProps {
+  embedded?: boolean
+  onResearchAction?: (action: ResearchAction) => void
+}
+
+export function ExplorePage({ embedded = false, onResearchAction }: ExplorePageProps = {}) {
   const { occurrences } = useApp()
-  const [viewMode, setViewMode] = useState<"map" | "list">("map")
+  const [viewMode, setViewMode] = useState<"map" | "list">(embedded ? "list" : "map")
   const [selectedOccurrenceId, setSelectedOccurrenceId] = useState<string | null>(null)
   const [detailSheetOpen, setDetailSheetOpen] = useState(false)
   const selectedOccurrence = occurrences.find(
@@ -39,10 +44,11 @@ export function ExplorePage() {
   const handleViewDetails = (occurrence: Occurrence) => {
     setSelectedOccurrenceId(occurrence.id)
     setDetailSheetOpen(true)
+    onResearchAction?.("occurrence-opened")
   }
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-3.5rem-4rem)] lg:h-[calc(100vh-4rem)]">
+    <div className={embedded ? "flex h-full min-h-0 flex-col" : "flex flex-col h-[calc(100dvh-3.5rem-4rem)] lg:h-[calc(100vh-4rem)]"}>
       {/* Header with toggle */}
       <div className="flex items-center justify-between p-3 sm:p-4 border-b border-border/50 bg-card/50 flex-shrink-0">
         <div>
@@ -82,6 +88,7 @@ export function ExplorePage() {
         occurrence={selectedOccurrence}
         open={detailSheetOpen}
         onOpenChange={setDetailSheetOpen}
+        onResearchAction={onResearchAction}
       />
     </div>
   )
