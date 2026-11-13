@@ -6,11 +6,29 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-type Table<Row, Required extends keyof Row = never> = {
+type Relationship<
+  ForeignKey extends string,
+  Column extends string,
+  ReferencedTable extends string,
+  ReferencedColumn extends string,
+  OneToOne extends boolean = false,
+> = {
+  foreignKeyName: ForeignKey
+  columns: [Column]
+  isOneToOne: OneToOne
+  referencedRelation: ReferencedTable
+  referencedColumns: [ReferencedColumn]
+}
+
+type Table<
+  Row,
+  Required extends keyof Row = never,
+  Relations extends unknown[] = [],
+> = {
   Row: Row
   Insert: Pick<Row, Required> & Partial<Omit<Row, Required>>
   Update: Partial<Row>
-  Relationships: []
+  Relationships: Relations
 }
 
 type Category = "buraco" | "iluminacao" | "vazamento" | "lixo" | "sinalizacao" | "outros"
@@ -109,14 +127,58 @@ export type Database = {
   public: {
     Tables: {
       profiles: Table<Profile, "user_id">
-      occurrences: Table<Occurrence, "title" | "description" | "category" | "neighborhood" | "address" | "latitude" | "longitude" | "author_id">
-      comments: Table<Comment, "occurrence_id" | "author_id" | "author_nickname" | "message">
-      supports: Table<Support, "occurrence_id" | "supporter_id">
-      priority_votes: Table<PriorityVote, "occurrence_id" | "user_id" | "priority">
-      occurrence_feedback: Table<OccurrenceFeedback, "occurrence_id" | "user_id" | "feedback_type">
-      evaluation_participants: Table<EvaluationParticipant, "user_id">
-      evaluation_tasks: Table<EvaluationTask, "participant_id" | "task_key">
-      evaluation_answers: Table<EvaluationAnswer, "participant_id" | "question_key" | "answer">
+      occurrences: Table<
+        Occurrence,
+        "title" | "description" | "category" | "neighborhood" | "address" | "latitude" | "longitude" | "author_id",
+        [Relationship<"occurrences_author_id_fkey", "author_id", "profiles", "user_id">]
+      >
+      comments: Table<
+        Comment,
+        "occurrence_id" | "author_id" | "author_nickname" | "message",
+        [
+          Relationship<"comments_author_id_fkey", "author_id", "profiles", "user_id">,
+          Relationship<"comments_occurrence_id_fkey", "occurrence_id", "occurrences", "id">
+        ]
+      >
+      supports: Table<
+        Support,
+        "occurrence_id" | "supporter_id",
+        [
+          Relationship<"supports_occurrence_id_fkey", "occurrence_id", "occurrences", "id">,
+          Relationship<"supports_supporter_id_fkey", "supporter_id", "profiles", "user_id">
+        ]
+      >
+      priority_votes: Table<
+        PriorityVote,
+        "occurrence_id" | "user_id" | "priority",
+        [
+          Relationship<"priority_votes_occurrence_id_fkey", "occurrence_id", "occurrences", "id">,
+          Relationship<"priority_votes_user_id_fkey", "user_id", "profiles", "user_id">
+        ]
+      >
+      occurrence_feedback: Table<
+        OccurrenceFeedback,
+        "occurrence_id" | "user_id" | "feedback_type",
+        [
+          Relationship<"occurrence_feedback_occurrence_id_fkey", "occurrence_id", "occurrences", "id">,
+          Relationship<"occurrence_feedback_user_id_fkey", "user_id", "profiles", "user_id">
+        ]
+      >
+      evaluation_participants: Table<
+        EvaluationParticipant,
+        "user_id",
+        [Relationship<"evaluation_participants_user_id_fkey", "user_id", "profiles", "user_id", true>]
+      >
+      evaluation_tasks: Table<
+        EvaluationTask,
+        "participant_id" | "task_key",
+        [Relationship<"evaluation_tasks_participant_id_fkey", "participant_id", "evaluation_participants", "user_id">]
+      >
+      evaluation_answers: Table<
+        EvaluationAnswer,
+        "participant_id" | "question_key" | "answer",
+        [Relationship<"evaluation_answers_participant_id_fkey", "participant_id", "evaluation_participants", "user_id">]
+      >
     }
     Views: { [_ in never]: never }
     Functions: {
