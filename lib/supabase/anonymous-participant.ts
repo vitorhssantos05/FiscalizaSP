@@ -20,13 +20,19 @@ export async function startAnonymousParticipant(nickname: string) {
   }
 
   if (!user) throw new Error("Não foi possível iniciar uma sessão anônima.")
+  if (user.is_anonymous !== true) {
+    throw new Error("Esta ação exige uma sessão anônima de participante.")
+  }
 
-  const { error: profileError } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .update({ nickname: normalizedNickname })
     .eq("user_id", user.id)
+    .select("user_id")
+    .single()
 
   if (profileError) throw profileError
+  if (!profile) throw new Error("Não foi possível salvar o apelido do participante.")
 
   return user.id
 }
