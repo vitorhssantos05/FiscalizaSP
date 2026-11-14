@@ -149,7 +149,7 @@ export function Navigation({
                   />
                 </div>
                 <p id="admin-demo-description" className="px-2 pt-2 text-xs text-muted-foreground">
-                  Acesso demonstrativo; não concede privilégios administrativos reais.
+                  Gerencie e analise as ocorrências registradas na plataforma
                 </p>
               </DropdownMenuContent>
             </DropdownMenu>

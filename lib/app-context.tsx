@@ -204,7 +204,9 @@ export function AppProvider({
 
   const supportOccurrence = useCallback((id: string) => {
     const added = updateUserInteraction(id, (current) =>
-      current.hasSupported ? current : { ...current, hasSupported: true },
+      current.hasSupported || current.hasContestedExistence
+        ? current
+        : { ...current, hasSupported: true },
     )
     if (!added) return false
 
@@ -301,7 +303,7 @@ export function AppProvider({
 
   const contestExistence = useCallback((id: string) => {
     const recorded = updateUserInteraction(id, (current) =>
-      current.hasContestedExistence
+      current.hasContestedExistence || current.hasSupported
         ? current
         : { ...current, hasContestedExistence: true },
     )

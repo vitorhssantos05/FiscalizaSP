@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import dynamic from "next/dynamic"
 import { useApp } from "@/lib/app-context"
 import type { Occurrence } from "@/lib/types"
@@ -29,10 +29,12 @@ const MapComponent = dynamic(
 
 interface ExplorePageProps {
   embedded?: boolean
-  onResearchAction?: (action: ResearchAction) => void
+  allowDetails?: boolean
+  onResearchAction?: (action: ResearchAction, occurrenceId?: string) => void
+  onOccurrenceLocated?: (view: "map" | "list", occurrenceId: string) => void
 }
 
-export function ExplorePage({ embedded = false, onResearchAction }: ExplorePageProps = {}) {
+export function ExplorePage({ embedded = false, allowDetails = true, onResearchAction, onOccurrenceLocated }: ExplorePageProps = {}) {
   const { occurrences } = useApp()
   const [viewMode, setViewMode] = useState<"map" | "list">(embedded ? "list" : "map")
   const [selectedOccurrenceId, setSelectedOccurrenceId] = useState<string | null>(null)
@@ -40,11 +42,18 @@ export function ExplorePage({ embedded = false, onResearchAction }: ExplorePageP
   const selectedOccurrence = occurrences.find(
     (occurrence) => occurrence.id === selectedOccurrenceId,
   ) ?? null
+  const onResearchActionRef = useRef(onResearchAction)
+  onResearchActionRef.current = onResearchAction
+
+  useEffect(() => {
+    onResearchActionRef.current?.(viewMode === "map" ? "map-viewed" : "list-viewed")
+  }, [viewMode])
 
   const handleViewDetails = (occurrence: Occurrence) => {
+    if (!allowDetails) return
     setSelectedOccurrenceId(occurrence.id)
     setDetailSheetOpen(true)
-    onResearchAction?.("occurrence-opened")
+    onResearchAction?.("occurrence-opened", occurrence.id)
   }
 
   return (
@@ -77,9 +86,16 @@ export function ExplorePage({ embedded = false, onResearchAction }: ExplorePageP
           <MapComponent
             occurrences={occurrences}
             onViewDetails={handleViewDetails}
+            onOccurrenceSelect={(occurrence) => onOccurrenceLocated?.("map", occurrence.id)}
+            allowDetails={allowDetails}
+            legendInitiallyCollapsed={embedded}
           />
         ) : (
-          <OccurrenceList onViewDetails={handleViewDetails} />
+          <OccurrenceList
+            onViewDetails={handleViewDetails}
+            allowDetails={allowDetails}
+            onOccurrenceSelect={(occurrence) => onOccurrenceLocated?.("list", occurrence.id)}
+          />
         )}
       </div>
 
@@ -89,6 +105,7 @@ export function ExplorePage({ embedded = false, onResearchAction }: ExplorePageP
         open={detailSheetOpen}
         onOpenChange={setDetailSheetOpen}
         onResearchAction={onResearchAction}
+        embedded={embedded}
       />
     </div>
   )

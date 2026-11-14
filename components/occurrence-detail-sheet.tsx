@@ -45,13 +45,16 @@ export type ResearchAction =
   | "comment-added"
   | "support-added"
   | "priority-voted"
+  | "map-viewed"
+  | "list-viewed"
   | "interaction-error"
 
 interface OccurrenceDetailSheetProps {
   occurrence: Occurrence | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  onResearchAction?: (action: ResearchAction) => void
+  onResearchAction?: (action: ResearchAction, occurrenceId?: string) => void
+  embedded?: boolean
 }
 
 export function OccurrenceDetailSheet({
@@ -59,6 +62,7 @@ export function OccurrenceDetailSheet({
   open,
   onOpenChange,
   onResearchAction,
+  embedded = false,
 }: OccurrenceDetailSheetProps) {
   const {
     requestNickname,
@@ -110,7 +114,7 @@ export function OccurrenceDetailSheet({
         return
       }
 
-      onResearchAction?.("support-added")
+      onResearchAction?.("support-added", occurrence.id)
       toast.success("Você apoiou esta ocorrência!", {
         description: `${occurrence.supports + 1} pessoas apoiam este problema`,
       })
@@ -153,12 +157,12 @@ export function OccurrenceDetailSheet({
         onResearchAction?.("interaction-error")
         toast.warning("Este voto não pode ser alterado novamente nesta sessão.")
       } else if (isChangingVote) {
-        onResearchAction?.("priority-voted")
+        onResearchAction?.("priority-voted", occurrence.id)
         toast.success("Voto alterado!", {
           description: `Seu voto foi alterado para prioridade ${priorityLabels[pendingVotePriority]}.`,
         })
       } else {
-        onResearchAction?.("priority-voted")
+        onResearchAction?.("priority-voted", occurrence.id)
         toast.success("Voto Consciente registrado!", {
           description: `Você votou para prioridade ${priorityLabels[pendingVotePriority]}.`,
         })
@@ -228,7 +232,7 @@ export function OccurrenceDetailSheet({
 
       try {
         addComment(occurrence.id, message)
-        onResearchAction?.("comment-added")
+        onResearchAction?.("comment-added", occurrence.id)
         lastSubmittedComment.current = { occurrenceId: occurrence.id, message }
         setNewComment("")
         toast.success("Comentário adicionado!")
@@ -256,8 +260,11 @@ export function OccurrenceDetailSheet({
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="w-full sm:max-w-lg p-0 flex flex-col h-full">
+      <Sheet open={open} modal={!embedded} onOpenChange={onOpenChange}>
+        <SheetContent
+          hideOverlay={embedded}
+          className={`w-full p-0 flex flex-col h-full sm:max-w-lg ${embedded ? "!inset-y-auto !top-60 !bottom-24 !right-2 !h-auto !max-h-none !w-[calc(100vw-1rem)] !max-w-none sm:!w-[min(36rem,calc(100vw-2rem))] lg:!top-60 lg:!bottom-28 lg:!right-4 lg:!w-[min(38rem,50vw)]" : ""}`}
+        >
           <SheetHeader className="flex-shrink-0 p-6 pb-0">
             <SheetTitle className="text-left pr-8 line-clamp-2">{occurrence.title}</SheetTitle>
           </SheetHeader>
@@ -380,10 +387,10 @@ export function OccurrenceDetailSheet({
                     onClick={handleSupport}
                     className="gap-2 w-full"
                     variant={userInteraction.hasSupported ? "secondary" : "default"}
-                    disabled={userInteraction.hasSupported}
+                    disabled={userInteraction.hasSupported || userInteraction.hasContestedExistence}
                   >
                     <ThumbsUp className="h-4 w-4" />
-                    {userInteraction.hasSupported ? "Apoio registrado" : "Apoiar"}
+                    {userInteraction.hasSupported ? "Apoio registrado" : userInteraction.hasContestedExistence ? "Contestação registrada — apoio indisponível" : "Apoiar"}
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -406,12 +413,14 @@ export function OccurrenceDetailSheet({
                       size="sm"
                       className="w-full border-yellow-300/50 hover:bg-yellow-300/10 text-yellow-600"
                       onClick={handleContestExistence}
-                      disabled={userInteraction.hasContestedExistence}
+                      disabled={userInteraction.hasContestedExistence || userInteraction.hasSupported}
                     >
                       <AlertCircle className="h-4 w-4 mr-2" />
                       {userInteraction.hasContestedExistence
                         ? "Contestação registrada"
-                        : "Problema não encontrado"}
+                        : userInteraction.hasSupported
+                          ? "Apoio já registrado"
+                          : "Problema não encontrado"}
                     </Button>
                     {occurrence.existenceContestations > 0 && (
                       <p className="text-xs text-yellow-600 mt-2 flex items-center gap-1">

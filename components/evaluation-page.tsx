@@ -12,8 +12,9 @@ import { Progress } from "@/components/ui/progress"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { AppProvider } from "@/lib/app-context"
 import { GuidedCitizenTasks, type GuidedTaskSummary } from "@/components/guided-citizen-tasks"
+import { EvaluationQuestionnaire } from "@/components/evaluation-questionnaire"
 
-type ResearchPhase = "introduction" | "profile" | "review" | "transition" | "tasks" | "completed" | "declined"
+type ResearchPhase = "introduction" | "profile" | "review" | "transition" | "tasks" | "questionnaire" | "completed" | "declined"
 type AnswerKey = "ageRange" | "smartphoneUse" | "digitalFamiliarity" | "platformExperience"
 type Answers = Record<AnswerKey, string>
 
@@ -116,9 +117,13 @@ export function EvaluationPage() {
 
   const finishE1 = () => setPhase("transition")
 
-  const finishE3 = (summary: GuidedTaskSummary) => {
-    clearDraft()
+  const finishTasks = (summary: GuidedTaskSummary) => {
     setTaskSummary(summary)
+    setPhase("questionnaire")
+  }
+
+  const finishQuestionnaire = () => {
+    clearDraft()
     setPhase("completed")
   }
 
@@ -136,9 +141,13 @@ export function EvaluationPage() {
   if (phase === "tasks") {
     return (
       <AppProvider initialNickname="Participante">
-        <GuidedCitizenTasks onFinish={finishE3} onAbandon={abandonEvaluation} />
+        <GuidedCitizenTasks onFinish={finishTasks} onAbandon={abandonEvaluation} />
       </AppProvider>
     )
+  }
+
+  if (phase === "questionnaire") {
+    return <EvaluationQuestionnaire onFinish={finishQuestionnaire} onAbandon={abandonEvaluation} />
   }
 
   const currentStep = phase === "introduction" ? 1 : phase === "profile" ? 2 : 3
@@ -153,7 +162,7 @@ export function EvaluationPage() {
             Pesquisa acadêmica · TGI-II
           </Badge>
           {phase !== "declined" && phase !== "transition" && phase !== "completed" && (
-            <span className="text-sm text-muted-foreground">Etapa E1 de 5</span>
+            <span className="text-sm text-muted-foreground">Preparação da avaliação</span>
           )}
         </div>
         <div>
@@ -167,7 +176,7 @@ export function EvaluationPage() {
       </header>
 
       {phase !== "declined" && phase !== "transition" && (
-        <div className="flex flex-col gap-3" aria-label={`Etapa ${currentStep} de 3: ${stepLabels[currentStep - 1]}`}>
+        <div className="flex flex-col gap-3" aria-label={`Parte ${currentStep} de 3: ${stepLabels[currentStep - 1]}`}>
           <div className="flex items-center justify-between gap-2 text-xs font-medium sm:text-sm">
             {stepLabels.map((label, index) => {
               const step = index + 1
@@ -219,7 +228,7 @@ export function EvaluationPage() {
             <div className="rounded-lg border p-4">
               <h2 className="font-medium">O que acontece nesta etapa?</h2>
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                Você responderá perguntas gerais de perfil, revisará suas respostas e depois poderá realizar cinco tarefas cidadãs com dados demonstrativos isolados. Nenhuma resposta ou interação será enviada nem preservada fora desta sessão; não há coleta oficial de dados.
+                Você responderá perguntas gerais de perfil e, em seguida, poderá localizar ocorrências, consultar detalhes e interagir, registrar um caso demonstrativo, consultar o painel administrativo e responder ao questionário. As respostas e interações ficam isoladas nesta sessão; não há coleta oficial de dados.
               </p>
             </div>
             <div className="flex items-start gap-3 rounded-lg border p-4">
@@ -348,7 +357,7 @@ export function EvaluationPage() {
                 Desistir e descartar
               </Button>
               <Button type="button" onClick={finishE1}>
-                Concluir etapa E1
+                Concluir preparação
                 <Check data-icon="inline-end" />
               </Button>
             </div>
@@ -362,14 +371,14 @@ export function EvaluationPage() {
             <div className="mb-2 flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <Check aria-hidden="true" className="size-6" />
             </div>
-            <CardTitle>Etapa E1 concluída</CardTitle>
-            <CardDescription>Obrigado por conhecer esta etapa demonstrativa do FiscalizaSP.</CardDescription>
+            <CardTitle>Preparação concluída</CardTitle>
+            <CardDescription>Agora você pode iniciar as tarefas práticas da avaliação demonstrativa.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <Alert>
               <AlertTriangle aria-hidden="true" />
               <AlertTitle>Ambiente demonstrativo e isolado</AlertTitle>
-              <AlertDescription>As respostas de perfil permanecem somente na memória do navegador. As tarefas seguintes usam dados de teste isolados e nenhuma interação será enviada ou misturada à navegação pública.</AlertDescription>
+              <AlertDescription>As respostas de perfil permanecem somente na memória desta sessão. As tarefas práticas usam dados isolados e nenhuma interação será enviada ou misturada à navegação pública.</AlertDescription>
             </Alert>
             <p className="text-sm leading-relaxed text-muted-foreground">
               Esta avaliação é demonstrativa; não inicia uma coleta oficial de dados nem deve ser usada como instrumento de pesquisa com participantes reais.
@@ -380,7 +389,7 @@ export function EvaluationPage() {
               Desistir e descartar dados
             </Button>
             <Button type="button" onClick={() => setPhase("tasks")}>
-              Iniciar tarefas cidadãs (E2)
+              Iniciar etapa 1
               <ArrowRight data-icon="inline-end" />
             </Button>
           </CardFooter>
@@ -394,11 +403,11 @@ export function EvaluationPage() {
               <Check aria-hidden="true" className="size-6" />
             </div>
             <CardTitle>Avaliação demonstrativa concluída</CardTitle>
-            <CardDescription>Obrigado por participar das etapas E1, E2 e E3 do protótipo.</CardDescription>
+            <CardDescription>Obrigado por avaliar sua experiência com o FiscalizaSP.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <p className="text-sm text-muted-foreground">
-              Tarefas concluídas: {taskSummary?.completed ?? 0} · Puladas: {taskSummary?.skipped ?? 0}.
+              Tarefas práticas concluídas: {taskSummary?.completed ?? 0} · Puladas: {taskSummary?.skipped ?? 0}.
             </p>
             <Alert>
               <LockKeyhole aria-hidden="true" />
@@ -406,7 +415,7 @@ export function EvaluationPage() {
               <AlertDescription>Nenhuma ocorrência, comentário, apoio ou voto desta avaliação foi publicado ou preservado.</AlertDescription>
             </Alert>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              O questionário Likert e o encerramento da avaliação serão apresentados na Etapa E4, quando forem autorizados.
+              Esta avaliação ainda é demonstrativa e não constitui uma coleta oficial de dados científicos.
             </p>
           </CardContent>
           <CardFooter className="border-t pt-6">

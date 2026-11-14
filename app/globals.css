@@ -600,15 +600,14 @@ body:has([data-state="open"][role="dialog"]) .map-legend {
   /* Para animação suave se necessário */
 }
 
-/* Mobile: esconder conteúdo quando colapsado */
-@media (max-width: 639px) {
-  .legend-content.legend-collapsed {
-    display: none !important;
-  }
-  
-  .map-legend:has(.legend-collapsed) {
-    min-width: auto;
-  }
+.legend-content.legend-collapsed {
+  display: none !important;
+}
+
+.map-legend:has(.legend-collapsed) {
+  min-width: 0;
+  width: max-content;
+  max-width: calc(100vw - 32px);
 }
 
 .legend-header-icon {
