@@ -335,7 +335,7 @@ export function RegisterPage({ onSuccess, demoMode = false, onResearchError }: R
           <CardHeader>
             <CardTitle className="text-lg">Imagem</CardTitle>
             <CardDescription>
-              Adicione uma foto do problema (opcional, mas recomendado)
+              Adicione uma foto do problema (opcional)
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -365,6 +365,7 @@ export function RegisterPage({ onSuccess, demoMode = false, onResearchError }: R
                 accept="image/jpeg,image/png,image/webp"
                 className="sr-only"
                 aria-describedby="occurrence-image-help"
+                aria-required="false"
                 onChange={handleImageUpload}
               />
               {imagePreview && (

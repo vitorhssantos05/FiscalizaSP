@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
-import { hasAdminSession } from "@/lib/admin-session"
 import type { Database } from "@/lib/supabase/database.types"
 
 function createAdminSupabase() {
@@ -9,12 +8,7 @@ function createAdminSupabase() {
   })
 }
 
-function unauthorized(message: string, status = 403) {
-  return NextResponse.json({ error: message }, { status })
-}
-
 export async function GET() {
-  if (!(await hasAdminSession())) return unauthorized("Sessão administrativa ausente ou expirada.", 401)
   const supabase = createAdminSupabase()
 
   const [{ data: participants, error: participantsError }, { data: tasks, error: tasksError }, { data: answers, error: answersError }] = await Promise.all([
