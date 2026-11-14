@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import dynamic from "next/dynamic"
 import { useApp } from "@/lib/app-context"
 import type { Occurrence } from "@/lib/types"
 import { OccurrenceList } from "@/components/occurrence-list"
-import { OccurrenceDetailSheet } from "@/components/occurrence-detail-sheet"
+import { OccurrenceDetailSheet, type ResearchAction } from "@/components/occurrence-detail-sheet"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -27,25 +27,48 @@ const MapComponent = dynamic(
   }
 )
 
-export function ExplorePage() {
+interface ExplorePageProps {
+  embedded?: boolean
+  allowDetails?: boolean
+  onResearchAction?: (action: ResearchAction, occurrenceId?: string) => void
+  onOccurrenceLocated?: (view: "map" | "list", occurrenceId: string) => void
+}
+
+export function ExplorePage({ embedded = false, allowDetails = true, onResearchAction, onOccurrenceLocated }: ExplorePageProps = {}) {
   const { occurrences } = useApp()
-  const [viewMode, setViewMode] = useState<"map" | "list">("map")
-  const [selectedOccurrence, setSelectedOccurrence] = useState<Occurrence | null>(null)
+  const [viewMode, setViewMode] = useState<"map" | "list">(embedded ? "list" : "map")
+  const [selectedOccurrenceId, setSelectedOccurrenceId] = useState<string | null>(null)
   const [detailSheetOpen, setDetailSheetOpen] = useState(false)
+  const selectedOccurrence = occurrences.find(
+    (occurrence) => occurrence.id === selectedOccurrenceId,
+  ) ?? null
+  const onResearchActionRef = useRef(onResearchAction)
+  onResearchActionRef.current = onResearchAction
+
+  useEffect(() => {
+    onResearchActionRef.current?.(viewMode === "map" ? "map-viewed" : "list-viewed")
+  }, [viewMode])
+
+  const handleDetailsOpenChange = (open: boolean) => {
+    setDetailSheetOpen(open)
+  }
 
   const handleViewDetails = (occurrence: Occurrence) => {
-    setSelectedOccurrence(occurrence)
-    setDetailSheetOpen(true)
+    if (!allowDetails) return
+    setSelectedOccurrenceId(occurrence.id)
+    handleDetailsOpenChange(true)
+    onResearchAction?.("occurrence-opened", occurrence.id)
   }
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-3.5rem-4rem)] lg:h-[calc(100vh-4rem)]">
+    <div className={embedded ? "relative flex h-full min-h-0 flex-col" : "flex flex-col h-[calc(100dvh-3.5rem-4rem)] lg:h-[calc(100vh-4rem)]"}>
       {/* Header with toggle */}
       <div className="flex items-center justify-between p-3 sm:p-4 border-b border-border/50 bg-card/50 flex-shrink-0">
         <div>
           <h1 className="text-lg sm:text-xl font-bold text-foreground">Explorar Ocorrências</h1>
           <p className="text-xs sm:text-sm text-muted-foreground">
-            {occurrences.length} ocorrência{occurrences.length !== 1 ? "s" : ""} registrada{occurrences.length !== 1 ? "s" : ""}
+            {occurrences.length} ocorrência{occurrences.length !== 1 ? "s" : ""} disponível{occurrences.length !== 1 ? "s" : ""}
+            <span className="ml-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-amber-700 dark:text-amber-300">Exemplos demonstrativos</span>
           </p>
         </div>
         <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "map" | "list")}>
@@ -68,9 +91,16 @@ export function ExplorePage() {
           <MapComponent
             occurrences={occurrences}
             onViewDetails={handleViewDetails}
+            onOccurrenceSelect={(occurrence) => onOccurrenceLocated?.("map", occurrence.id)}
+            allowDetails={allowDetails}
+            legendInitiallyCollapsed={embedded}
           />
         ) : (
-          <OccurrenceList onViewDetails={handleViewDetails} />
+          <OccurrenceList
+            onViewDetails={handleViewDetails}
+            allowDetails={allowDetails}
+            onOccurrenceSelect={(occurrence) => onOccurrenceLocated?.("list", occurrence.id)}
+          />
         )}
       </div>
 
@@ -78,7 +108,9 @@ export function ExplorePage() {
       <OccurrenceDetailSheet
         occurrence={selectedOccurrence}
         open={detailSheetOpen}
-        onOpenChange={setDetailSheetOpen}
+        onOpenChange={handleDetailsOpenChange}
+        onResearchAction={onResearchAction}
+        embedded={embedded}
       />
     </div>
   )

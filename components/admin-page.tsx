@@ -2,7 +2,7 @@
 
 import { useMemo } from "react"
 import { useApp } from "@/lib/app-context"
-import type { OccurrenceStatus } from "@/lib/types"
+import type { Occurrence, OccurrenceStatus } from "@/lib/types"
 import { categoryLabels, statusLabels, calculateDynamicPriority, priorityLabels } from "@/lib/types"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -51,7 +51,11 @@ const COLORS = {
   orangeLight: "#FB923C",
 }
 
-export function AdminPage() {
+interface AdminPageProps {
+  onResearchStatusChange?: (occurrence: Occurrence, nextStatus: OccurrenceStatus) => void
+}
+
+export function AdminPage({ onResearchStatusChange }: AdminPageProps = {}) {
   const { occurrences, updateOccurrenceStatus, stats, getDynamicPriority } = useApp()
 
   // Stats by category
@@ -95,7 +99,9 @@ export function AdminPage() {
   }, [occurrences])
 
   const handleStatusChange = (occurrenceId: string, newStatus: OccurrenceStatus) => {
+    const previousOccurrence = occurrences.find((occurrence) => occurrence.id === occurrenceId)
     updateOccurrenceStatus(occurrenceId, newStatus)
+    if (previousOccurrence) onResearchStatusChange?.(previousOccurrence, newStatus)
     toast.success("Status atualizado!", {
       description: `Ocorrência alterada para: ${statusLabels[newStatus]}`,
     })
@@ -106,7 +112,7 @@ export function AdminPage() {
       <div className="mb-8">
         <h1 className="text-2xl md:text-3xl font-bold text-foreground">Painel Administrativo</h1>
         <p className="text-muted-foreground mt-2">
-          Gerencie e analise as ocorrências registradas na plataforma
+          Painel demonstrativo com dados locais. As alterações valem somente nesta sessão e não concedem privilégios administrativos reais.
         </p>
       </div>
 

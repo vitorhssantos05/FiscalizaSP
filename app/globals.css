@@ -600,15 +600,14 @@ body:has([data-state="open"][role="dialog"]) .map-legend {
   /* Para animação suave se necessário */
 }
 
-/* Mobile: esconder conteúdo quando colapsado */
-@media (max-width: 639px) {
-  .legend-content.legend-collapsed {
-    display: none !important;
-  }
-  
-  .map-legend:has(.legend-collapsed) {
-    min-width: auto;
-  }
+.legend-content.legend-collapsed {
+  display: none !important;
+}
+
+.map-legend:has(.legend-collapsed) {
+  min-width: 0;
+  width: max-content;
+  max-width: calc(100vw - 32px);
 }
 
 .legend-header-icon {
@@ -690,6 +689,125 @@ body:has([data-state="open"][role="dialog"]) .map-legend {
 
 .dark .legend-marker-mini {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Legenda compacta para preservar a área útil do mapa. */
+.map-legend {
+  width: 192px;
+  min-width: 0;
+  max-width: calc(100vw - 24px);
+  max-height: min(46vh, 320px);
+}
+
+.map-legend .legend-header {
+  gap: 7px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.map-legend .legend-section {
+  padding: 7px 10px;
+}
+
+.map-legend .legend-section-title {
+  margin-bottom: 5px;
+  font-size: 10px;
+  letter-spacing: 0.3px;
+}
+
+.map-legend .legend-content {
+  max-height: min(40vh, 280px);
+  overflow-y: auto;
+}
+
+.map-legend .legend-items {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px 7px;
+}
+
+.map-legend .legend-item {
+  gap: 4px;
+  align-items: flex-start;
+}
+
+.map-legend .legend-marker-preview {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+}
+
+.map-legend .legend-marker-mini {
+  width: 13px;
+  height: 13px;
+  border-width: 2px;
+}
+
+.map-legend .legend-item-info {
+  min-width: 0;
+  gap: 1px;
+}
+
+.map-legend .legend-item-label {
+  font-size: 10px;
+  line-height: 1.15;
+}
+
+.map-legend .legend-item-color {
+  font-size: 9px;
+  line-height: 1.15;
+}
+
+@media (max-width: 640px) {
+  .map-legend {
+    width: min(168px, calc(100vw - 16px));
+    max-width: calc(100vw - 16px);
+    max-height: min(46vh, 260px);
+  }
+
+  .map-legend .legend-header {
+    gap: 6px;
+    padding: 6px 8px;
+    font-size: 10px;
+  }
+
+  .map-legend .legend-header-icon {
+    width: 12px;
+    height: 12px;
+  }
+
+  .map-legend .legend-section {
+    padding: 6px 8px;
+  }
+
+  .map-legend .legend-section-title {
+    font-size: 9px;
+  }
+
+  .map-legend .legend-content {
+    max-height: min(40vh, 220px);
+  }
+
+  .map-legend .legend-items {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .map-legend .legend-item-info {
+    flex-direction: row;
+    flex: 1;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px;
+  }
+
+  .map-legend .legend-item-label {
+    font-size: 10px;
+  }
+
+  .map-legend .legend-item-color {
+    font-size: 8px;
+  }
 }
 
 /* Smooth transitions */

@@ -1,38 +1,49 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import { AppProvider, useApp } from "@/lib/app-context"
-import { AuthScreen } from "@/components/auth-screen"
 import { Navigation, type Page } from "@/components/navigation"
 import { HomePage } from "@/components/home-page"
 import { ExplorePage } from "@/components/explore-page"
 import { RegisterPage } from "@/components/register-page"
 import { AdminPage } from "@/components/admin-page"
 import { EvaluationPage } from "@/components/evaluation-page"
+import { AdminResultsPage } from "@/components/admin-results-page"
 import { Toaster } from "@/components/ui/sonner"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 function AppContent() {
-  const { isAuthenticated, isDarkMode, isAdminMode } = useApp()
+  const {
+    isDarkMode,
+    nicknameDialogOpen,
+    submitNickname,
+    closeNicknameDialog,
+  } = useApp()
   const [currentPage, setCurrentPage] = useState<Page>("home")
-  const [isAuthComplete, setIsAuthComplete] = useState(false)
+  const [isAdminDemoMode, setIsAdminDemoMode] = useState(false)
+  const [nicknameInput, setNicknameInput] = useState("")
 
-  // Initialize dark mode on mount
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add("dark")
     }
   }, [isDarkMode])
 
-  // Redirect from admin page if admin mode is disabled
   useEffect(() => {
-    if (currentPage === "admin" && !isAdminMode) {
+    if (currentPage === "admin" && !isAdminDemoMode) {
       setCurrentPage("home")
     }
-  }, [isAdminMode, currentPage])
-
-  if (!isAuthComplete) {
-    return <AuthScreen onAuthSuccess={() => setIsAuthComplete(true)} />
-  }
+  }, [currentPage, isAdminDemoMode])
 
   const renderPage = () => {
     switch (currentPage) {
@@ -43,7 +54,9 @@ function AppContent() {
       case "register":
         return <RegisterPage onSuccess={() => setCurrentPage("explore")} />
       case "admin":
-        return isAdminMode ? <AdminPage /> : <HomePage onNavigate={setCurrentPage} />
+        return isAdminDemoMode ? <AdminPage /> : <HomePage onNavigate={setCurrentPage} />
+      case "results":
+        return <AdminResultsPage />
       case "evaluation":
         return <EvaluationPage />
       default:
@@ -51,10 +64,54 @@ function AppContent() {
     }
   }
 
+  const handleNicknameSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const trimmedNickname = nicknameInput.trim()
+    if (!trimmedNickname) return
+    submitNickname(trimmedNickname)
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      <Navigation currentPage={currentPage} onPageChange={setCurrentPage} />
+      <Navigation
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        isAdminDemoMode={isAdminDemoMode}
+        onAdminDemoModeChange={setIsAdminDemoMode}
+      />
       <main className="pb-16 lg:pb-0">{renderPage()}</main>
+      <Dialog open={nicknameDialogOpen} onOpenChange={(open) => !open && closeNicknameDialog()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Escolha um apelido</DialogTitle>
+            <DialogDescription>
+              Use um nome temporário para continuar. Ele não verifica sua identidade nem cria uma conta.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleNicknameSubmit} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="nickname">Apelido</Label>
+              <Input
+                id="nickname"
+                autoComplete="nickname"
+                maxLength={40}
+                value={nicknameInput}
+                onChange={(event) => setNicknameInput(event.target.value)}
+                placeholder="Como quer aparecer?"
+                required
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={closeNicknameDialog}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={!nicknameInput.trim()}>
+                Continuar
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

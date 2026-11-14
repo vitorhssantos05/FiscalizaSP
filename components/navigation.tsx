@@ -3,39 +3,35 @@
 import { useApp } from "@/lib/app-context"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Switch } from "@/components/ui/switch"
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
 import {
   Building2,
   Moon,
   Sun,
-  Shield,
-  LogOut,
-  User,
   Home,
   MapPin,
   PlusCircle,
   LayoutDashboard,
   ClipboardCheck,
-  Info,
-  X,
+  Shield,
 } from "lucide-react"
-import { useState, useEffect } from "react"
 
-type Page = "home" | "explore" | "register" | "admin" | "evaluation"
+type Page = "home" | "explore" | "register" | "admin" | "results" | "evaluation"
 
 interface NavigationProps {
   currentPage: Page
   onPageChange: (page: Page) => void
+  isAdminDemoMode: boolean
+  onAdminDemoModeChange: (enabled: boolean) => void
 }
 
 const navItems = [
@@ -46,30 +42,15 @@ const navItems = [
   { id: "evaluation" as Page, label: "Avaliação Acadêmica", labelShort: "Avaliar", icon: ClipboardCheck },
 ]
 
-export function Navigation({ currentPage, onPageChange }: NavigationProps) {
-  const { user, isAdminMode, toggleAdminMode, isDarkMode, toggleDarkMode, logout } = useApp()
-  const [showAdminTip, setShowAdminTip] = useState(false)
-
-  // Mostrar dica do modo admin após 2 segundos se não estiver em modo admin
-  useEffect(() => {
-    if (!isAdminMode) {
-      const timer = setTimeout(() => {
-        const hasSeenTip = localStorage.getItem("hasSeenAdminTip")
-        if (!hasSeenTip) {
-          setShowAdminTip(true)
-        }
-      }, 2000)
-      return () => clearTimeout(timer)
-    }
-  }, [isAdminMode])
-
-  const dismissAdminTip = () => {
-    setShowAdminTip(false)
-    localStorage.setItem("hasSeenAdminTip", "true")
-  }
-
+export function Navigation({
+  currentPage,
+  onPageChange,
+  isAdminDemoMode,
+  onAdminDemoModeChange,
+}: NavigationProps) {
+  const { nickname, isDarkMode, toggleDarkMode } = useApp()
   const visibleNavItems = navItems.filter(
-    (item) => !item.adminOnly || isAdminMode
+    (item) => !item.adminOnly || isAdminDemoMode,
   )
   
   // Items para a barra inferior mobile (limitado a 5)
@@ -97,9 +78,11 @@ export function Navigation({ currentPage, onPageChange }: NavigationProps) {
                 size="sm"
                 onClick={() => onPageChange(item.id)}
                 className={`gap-2 ${item.adminOnly ? "text-primary" : ""}`}
+                aria-label={item.adminOnly ? "Painel Admin (demonstração)" : undefined}
+                title={item.adminOnly ? "Painel demonstrativo; sem privilégios administrativos reais" : undefined}
               >
                 <item.icon className="h-4 w-4" />
-                {isAdminMode ? item.labelShort : item.label}
+                {isAdminDemoMode ? item.labelShort : item.label}
               </Button>
             ))}
           </nav>
@@ -126,91 +109,60 @@ export function Navigation({ currentPage, onPageChange }: NavigationProps) {
                 <Button variant="ghost" className="gap-2 px-2">
                   <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
                     <AvatarFallback className="bg-primary text-primary-foreground text-xs sm:text-sm">
-                      {user?.name?.charAt(0) || "U"}
+                      {nickname?.charAt(0).toUpperCase() || "V"}
                     </AvatarFallback>
                   </Avatar>
                   <span className="hidden md:inline text-sm font-medium text-foreground">
-                    {user?.name || "Usuário"}
+                    {nickname || "Visitante"}
                   </span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>
-                  <div className="flex flex-col">
-                    <span className="text-foreground">{user?.name || "Usuário"}</span>
-                    <span className="text-xs text-muted-foreground font-normal">
-                      {user?.email || "usuario@email.com"}
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-foreground">{nickname || "Visitante"}</span>
+                    <span className="text-xs text-muted-foreground">
+                      Apelido temporário, sem autenticação
                     </span>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="gap-2">
-                  <User className="h-4 w-4" />
-                  Meu Perfil
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <div className="px-2 py-2">
-                  <div className="flex items-center justify-between gap-2 p-2 rounded-md bg-primary/5 border border-primary/20">
-                    <div className="flex items-center gap-2">
-                      <Shield className="h-4 w-4 text-primary" />
-                      <Label htmlFor="admin-mode-dropdown" className="text-sm cursor-pointer font-medium">
-                        Modo Admin
-                      </Label>
+                <div
+                  className={`flex items-center justify-between gap-2.5 rounded-lg border px-2.5 py-2 transition-colors ${
+                    isAdminDemoMode
+                      ? "border-primary/60 bg-primary/10"
+                      : "border-border bg-muted/20 hover:border-primary/40 hover:bg-primary/5"
+                  }`}
+                >
+                  <div className="flex min-w-0 items-center gap-2">
+                    <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                      <Shield aria-hidden="true" className="size-4" />
                     </div>
-                    <Switch
-                      id="admin-mode-dropdown"
-                      checked={isAdminMode}
-                      onCheckedChange={toggleAdminMode}
-                    />
+                    <Label htmlFor="admin-demo-mode" className="cursor-pointer text-sm font-semibold">
+                      Modo Admin
+                    </Label>
                   </div>
-                  {!isAdminMode && (
-                    <p className="text-xs text-muted-foreground mt-2 px-1">
-                      Ative para gerenciar ocorrências
-                    </p>
-                  )}
+                  <Switch
+                    id="admin-demo-mode"
+                    checked={isAdminDemoMode}
+                    onCheckedChange={onAdminDemoModeChange}
+                    aria-describedby="admin-demo-description"
+                  />
                 </div>
-                {isAdminMode && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="gap-2">
-                      <Shield className="h-4 w-4" />
-                      Configurações Admin
-                    </DropdownMenuItem>
-                  </>
-                )}
+                <p id="admin-demo-description" className="px-2 pt-2 text-xs text-muted-foreground">
+                  Gerencie e analise as ocorrências registradas na plataforma
+                </p>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="gap-2 text-destructive" onClick={logout}>
-                  <LogOut className="h-4 w-4" />
-                  Sair
+                <DropdownMenuItem onSelect={() => onPageChange("results")} onClick={() => onPageChange("results")}>
+                  <ClipboardCheck className="size-4" />
+                  Resultados da Pesquisa
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </div>
 
-        {/* Admin Tip Alert */}
-        {showAdminTip && !isAdminMode && (
-          <div className="border-t border-border/50 bg-primary/5 px-4 py-3">
-            <div className="container mx-auto">
-              <Alert className="border-primary/20 bg-transparent">
-                <Info className="h-4 w-4 text-primary" />
-                <AlertDescription className="flex items-center justify-between gap-4">
-                  <span className="text-sm text-foreground">
-                    <strong>Dica:</strong> Clique no seu perfil de usuário para acessar o <strong>Modo Administrador</strong> e gerenciar as ocorrências.
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={dismissAdminTip}
-                    className="shrink-0 text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            </div>
-          </div>
-        )}
+
       </header>
 
       {/* Mobile Bottom Navigation Bar */}
@@ -222,11 +174,13 @@ export function Navigation({ currentPage, onPageChange }: NavigationProps) {
               <button
                 key={item.id}
                 onClick={() => onPageChange(item.id)}
+                aria-label={item.adminOnly ? "Painel Admin (demonstração)" : item.label}
+                title={item.adminOnly ? "Painel demonstrativo; sem privilégios administrativos reais" : undefined}
                 className={`flex flex-col items-center justify-center flex-1 h-full gap-1 transition-colors ${
-                  isActive 
-                    ? "text-primary" 
+                  isActive || item.adminOnly
+                    ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
-                } ${item.adminOnly ? "text-primary" : ""}`}
+                }`}
               >
                 <item.icon className={`h-5 w-5 ${isActive ? "scale-110" : ""} transition-transform`} />
                 <span className={`text-[10px] font-medium ${isActive ? "font-semibold" : ""}`}>

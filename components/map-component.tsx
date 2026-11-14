@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useId, useState } from "react"
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
@@ -14,6 +14,9 @@ interface MapComponentProps {
   selectedLocation?: { lat: number; lng: number } | null
   onMapClick?: (lat: number, lng: number) => void
   isSelectionMode?: boolean
+  allowDetails?: boolean
+  onOccurrenceSelect?: (occurrence: Occurrence) => void
+  legendInitiallyCollapsed?: boolean
 }
 
 // Cores da PRIORIDADE (cor interna do marcador)
@@ -155,9 +158,13 @@ export function MapComponent({
   selectedLocation,
   onMapClick,
   isSelectionMode = false,
+  allowDetails = true,
+  onOccurrenceSelect,
+  legendInitiallyCollapsed = false,
 }: MapComponentProps) {
   const [isMounted, setIsMounted] = useState(false)
-  const [legendCollapsed, setLegendCollapsed] = useState(false) // Inicia aberto por padrão
+  const [legendCollapsed, setLegendCollapsed] = useState(legendInitiallyCollapsed)
+  const legendContentId = useId()
 
   useEffect(() => {
     setIsMounted(true)
@@ -226,9 +233,7 @@ export function MapComponent({
               position={[occurrence.latitude, occurrence.longitude]}
               icon={createCustomIcon(dynamicPriority, occurrence.status)}
               eventHandlers={{
-                click: () => {
-                  // O popup será mostrado automaticamente pelo Leaflet
-                }
+                click: () => onOccurrenceSelect?.(occurrence)
               }}
             >
               <Popup className="custom-popup" maxWidth={300} minWidth={280}>
@@ -318,17 +323,19 @@ export function MapComponent({
                       </div>
                     )}
 
-                    {/* Botão Ver Detalhes */}
-                    <button
-                      className="popup-button"
-                      onClick={() => onViewDetails(occurrence)}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
-                        <circle cx="12" cy="12" r="3"/>
-                      </svg>
-                      Ver detalhes
-                    </button>
+                    {allowDetails && (
+                      <button
+                        type="button"
+                        className="popup-button"
+                        onClick={() => onViewDetails(occurrence)}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                          <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                        Ver detalhes
+                      </button>
+                    )}
                   </div>
                 </div>
               </Popup>
@@ -341,22 +348,23 @@ export function MapComponent({
       {!isSelectionMode && (
         <div className="map-legend">
           {/* Cabeçalho da Legenda */}
-          <button 
-            className="legend-header w-full cursor-pointer sm:cursor-default"
-            onClick={() => setLegendCollapsed(!legendCollapsed)}
+          <button
+            type="button"
+            className="legend-header w-full cursor-pointer"
+            onClick={() => setLegendCollapsed((collapsed) => !collapsed)}
+            aria-expanded={!legendCollapsed}
+            aria-controls={legendContentId}
+            aria-label={legendCollapsed ? "Expandir legenda do mapa" : "Minimizar legenda do mapa"}
           >
-            <Info className="legend-header-icon" />
-            <span className="flex-1 text-left">Legenda do Mapa</span>
-            <span className="sm:hidden">
-              {legendCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-            </span>
+            <Info aria-hidden="true" className="legend-header-icon" />
+            <span className="flex-1 text-left">Legenda do mapa</span>
+            {legendCollapsed ? <ChevronDown aria-hidden="true" className="size-4" /> : <ChevronUp aria-hidden="true" className="size-4" />}
           </button>
-          
-          {/* Conteúdo colapsável - usa CSS para controlar visibilidade mobile/desktop */}
-          <div className={`legend-content ${legendCollapsed ? 'legend-collapsed' : ''}`}>
+
+          <div id={legendContentId} className={`legend-content ${legendCollapsed ? 'legend-collapsed' : ''}`}>
           {/* Seção: Status (Borda do Marcador) */}
           <div className="legend-section">
-            <h4 className="legend-section-title">Status (Borda)</h4>
+            <h4 className="legend-section-title">Status · borda</h4>
             <div className="legend-items">
               {/* Resolvida */}
               <div className="legend-item">
@@ -414,7 +422,7 @@ export function MapComponent({
 
           {/* Seção: Prioridade (Cor Interna) */}
           <div className="legend-section">
-            <h4 className="legend-section-title">Prioridade (Cor Interna)</h4>
+            <h4 className="legend-section-title">Prioridade · cor interna</h4>
             <div className="legend-items">
               {/* Alta */}
               <div className="legend-item">

@@ -6,27 +6,40 @@ import {
   useState,
   useMemo,
   useCallback,
+  useRef,
   type ReactNode,
 } from "react"
 import type {
   Occurrence,
-  User,
   OccurrenceStatus,
   Priority,
   Comment,
   UserVoteRecord,
 } from "@/lib/types"
-import { initialOccurrences, mockUser, mockAdminUser } from "@/lib/mock-data"
+import { initialOccurrences } from "@/lib/mock-data"
 import { calculateDynamicPriority } from "@/lib/types"
 
+type ResolutionFeedback = "confirmation" | "contestation"
+
+interface UserInteractionRecord {
+  hasSupported: boolean
+  resolutionFeedback: ResolutionFeedback | null
+  hasContestedExistence: boolean
+}
+
+const emptyUserInteraction: UserInteractionRecord = {
+  hasSupported: false,
+  resolutionFeedback: null,
+  hasContestedExistence: false,
+}
+
 interface AppContextType {
-  // User state
-  user: User | null
-  isAuthenticated: boolean
-  isAdminMode: boolean
-  login: (email: string, password: string, asAdmin?: boolean, name?: string) => void
-  logout: () => void
-  toggleAdminMode: () => void
+  // Temporary MVP nickname; it is not authentication or a trusted identity.
+  nickname: string | null
+  nicknameDialogOpen: boolean
+  requestNickname: (action: () => void) => void
+  submitNickname: (name: string) => void
+  closeNicknameDialog: () => void
 
   // Theme state
   isDarkMode: boolean
@@ -36,17 +49,18 @@ interface AppContextType {
   occurrences: Occurrence[]
   addOccurrence: (occurrence: Omit<Occurrence, "id" | "createdAt" | "supports" | "confirmations" | "contestations" | "comments" | "priorityVotes" | "existenceContestations">) => void
   updateOccurrenceStatus: (id: string, status: OccurrenceStatus) => void
-  supportOccurrence: (id: string) => void
-  voteOnPriority: (id: string, priority: Priority) => void
-  confirmResolution: (id: string) => void
-  contestResolution: (id: string) => void
-  contestExistence: (id: string) => void
+  supportOccurrence: (id: string) => boolean
+  voteOnPriority: (id: string, priority: Priority) => boolean
+  confirmResolution: (id: string) => boolean
+  contestResolution: (id: string) => boolean
+  contestExistence: (id: string) => boolean
   addComment: (occurrenceId: string, message: string) => void
 
-  // User vote tracking (Voto Consciente)
+  // Interaction limits are demonstrative and scoped to this app session.
   userVotes: UserVoteRecord[]
   getUserVote: (occurrenceId: string) => UserVoteRecord | undefined
   canChangeVote: (occurrenceId: string) => boolean
+  getUserInteraction: (occurrenceId: string) => UserInteractionRecord
 
   // Statistics
   stats: {
@@ -62,10 +76,44 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
 
-export function AppProvider({ children }: { children: ReactNode }) {
-  // User state
-  const [user, setUser] = useState<User | null>(null)
-  const [isAdminMode, setIsAdminMode] = useState(false)
+export function AppProvider({
+  children,
+  initialNickname = null,
+}: {
+  children: ReactNode
+  initialNickname?: string | null
+}) {
+  // This in-memory label is temporary and must never be treated as authentication.
+  const [nickname, setNickname] = useState<string | null>(initialNickname)
+  const [nicknameDialogOpen, setNicknameDialogOpen] = useState(false)
+  const pendingNicknameAction = useRef<(() => void) | null>(null)
+  const nicknameRef = useRef<string | null>(initialNickname)
+
+  const requestNickname = useCallback((action: () => void) => {
+    if (nickname) {
+      action()
+      return
+    }
+    pendingNicknameAction.current = action
+    setNicknameDialogOpen(true)
+  }, [nickname])
+
+  const submitNickname = useCallback((name: string) => {
+    const trimmedName = name.trim()
+    if (!trimmedName) return
+
+    nicknameRef.current = trimmedName
+    setNickname(trimmedName)
+    setNicknameDialogOpen(false)
+    const pendingAction = pendingNicknameAction.current
+    pendingNicknameAction.current = null
+    pendingAction?.()
+  }, [])
+
+  const closeNicknameDialog = useCallback(() => {
+    pendingNicknameAction.current = null
+    setNicknameDialogOpen(false)
+  }, [])
 
   // Theme state
   const [isDarkMode, setIsDarkMode] = useState(true)
@@ -73,38 +121,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Occurrences state
   const [occurrences, setOccurrences] = useState<Occurrence[]>(initialOccurrences)
 
-  // User vote tracking state (Voto Consciente)
+  // Interaction limits are temporary and apply only to this app session.
   const [userVotes, setUserVotes] = useState<UserVoteRecord[]>([])
+  const userVotesRef = useRef<UserVoteRecord[]>([])
+  const [userInteractions, setUserInteractions] = useState<Record<string, UserInteractionRecord>>({})
+  const userInteractionsRef = useRef<Record<string, UserInteractionRecord>>({})
 
-  // Auth functions
-  const login = useCallback((email: string, _password: string, asAdmin = false, name?: string) => {
-    // Mock login - always succeeds
-    if (asAdmin) {
-      setUser(mockAdminUser)
-      setIsAdminMode(true)
-    } else {
-      const userName = name || email.split("@")[0] || "Usuario"
-      const userEmail = email || "usuario@email.com"
-      setUser({
-        id: `user-${Date.now()}`,
-        name: userName,
-        email: userEmail,
-        isAdmin: false,
-        avatar: undefined,
-      })
-      setIsAdminMode(false)
-    }
-  }, [])
+  const getUserInteraction = useCallback(
+    (occurrenceId: string) => userInteractions[occurrenceId] ?? emptyUserInteraction,
+    [userInteractions],
+  )
 
-  const logout = useCallback(() => {
-    setUser(null)
-    setIsAdminMode(false)
-    setUserVotes([]) // Limpa votos ao fazer logout
-  }, [])
+  const updateUserInteraction = useCallback(
+    (
+      occurrenceId: string,
+      update: (current: UserInteractionRecord) => UserInteractionRecord,
+    ) => {
+      const current = userInteractionsRef.current[occurrenceId] ?? emptyUserInteraction
+      const next = update(current)
+      if (next === current) return false
 
-  const toggleAdminMode = useCallback(() => {
-    setIsAdminMode((prev) => !prev)
-  }, [])
+      const nextInteractions = {
+        ...userInteractionsRef.current,
+        [occurrenceId]: next,
+      }
+      userInteractionsRef.current = nextInteractions
+      setUserInteractions(nextInteractions)
+      return true
+    },
+    [],
+  )
 
   // Theme functions
   const toggleDarkMode = useCallback(() => {
@@ -157,103 +203,126 @@ export function AppProvider({ children }: { children: ReactNode }) {
   )
 
   const supportOccurrence = useCallback((id: string) => {
+    const added = updateUserInteraction(id, (current) =>
+      current.hasSupported || current.hasContestedExistence
+        ? current
+        : { ...current, hasSupported: true },
+    )
+    if (!added) return false
+
     setOccurrences((prev) =>
       prev.map((occ) =>
-        occ.id === id ? { ...occ, supports: occ.supports + 1 } : occ
-      )
+        occ.id === id ? { ...occ, supports: occ.supports + 1 } : occ,
+      ),
     )
-  }, [])
+    return true
+  }, [updateUserInteraction])
 
-  // Vote tracking helper functions
-  const getUserVote = useCallback((occurrenceId: string): UserVoteRecord | undefined => {
-    return userVotes.find(v => v.occurrenceId === occurrenceId)
-  }, [userVotes])
+  const getUserVote = useCallback(
+    (occurrenceId: string): UserVoteRecord | undefined =>
+      userVotes.find((vote) => vote.occurrenceId === occurrenceId),
+    [userVotes],
+  )
 
-  const canChangeVote = useCallback((_occurrenceId: string): boolean => {
-    // MVP: permite votos ilimitados para testes
-    // Implementacao futura: limitar a uma alteracao por ocorrencia
+  const canChangeVote = useCallback(
+    (occurrenceId: string): boolean => {
+      const vote = userVotes.find((record) => record.occurrenceId === occurrenceId)
+      return !vote || !vote.hasChanged
+    },
+    [userVotes],
+  )
+
+  const voteOnPriority = useCallback((id: string, priority: Priority) => {
+    const existingVote = userVotesRef.current.find((vote) => vote.occurrenceId === id)
+    if (existingVote?.hasChanged || existingVote?.priority === priority) return false
+
+    const nextVotes = existingVote
+      ? userVotesRef.current.map((vote) =>
+          vote.occurrenceId === id
+            ? { ...vote, priority, hasChanged: true }
+            : vote,
+        )
+      : [...userVotesRef.current, { occurrenceId: id, priority, hasChanged: false }]
+
+    userVotesRef.current = nextVotes
+    setUserVotes(nextVotes)
+    setOccurrences((prev) =>
+      prev.map((occurrence) => {
+        if (occurrence.id !== id) return occurrence
+
+        const nextPriorityVotes = { ...occurrence.priorityVotes }
+        if (existingVote) {
+          nextPriorityVotes[existingVote.priority] = Math.max(
+            0,
+            nextPriorityVotes[existingVote.priority] - 1,
+          )
+        }
+        nextPriorityVotes[priority] += 1
+
+        return { ...occurrence, priorityVotes: nextPriorityVotes }
+      }),
+    )
     return true
   }, [])
 
-  const voteOnPriority = useCallback((id: string, priority: Priority) => {
-    const existingVote = userVotes.find(v => v.occurrenceId === id)
-
-    // Atualiza os votos na ocorrencia
-    setOccurrences((prev) =>
-      prev.map((occ) => {
-        if (occ.id !== id) return occ
-        
-        // Se esta alterando o voto, remove o voto anterior e adiciona o novo
-        if (existingVote) {
-          return {
-            ...occ,
-            priorityVotes: {
-              ...occ.priorityVotes,
-              [existingVote.priority]: Math.max(0, occ.priorityVotes[existingVote.priority] - 1),
-              [priority]: occ.priorityVotes[priority] + 1,
-            },
-          }
-        }
-        
-        // Primeiro voto
-        return {
-          ...occ,
-          priorityVotes: {
-            ...occ.priorityVotes,
-            [priority]: occ.priorityVotes[priority] + 1,
-          },
-        }
-      })
-    )
-
-    // Atualiza o registro de votos do usuario (sem limitar alteracoes - MVP)
-    setUserVotes((prev) => {
-      const existing = prev.find(v => v.occurrenceId === id)
-      if (existing) {
-        return prev.map(v => 
-          v.occurrenceId === id 
-            ? { ...v, priority, hasChanged: true }
-            : v
-        )
-      }
-      return [...prev, { occurrenceId: id, priority, hasChanged: false }]
-    })
-  }, [userVotes])
-
   const confirmResolution = useCallback((id: string) => {
-    setOccurrences((prev) =>
-      prev.map((occ) =>
-        occ.id === id
-          ? { ...occ, confirmations: occ.confirmations + 1 }
-          : occ
-      )
+    const recorded = updateUserInteraction(id, (current) =>
+      current.resolutionFeedback
+        ? current
+        : { ...current, resolutionFeedback: "confirmation" },
     )
-  }, [])
+    if (!recorded) return false
+
+    setOccurrences((prev) =>
+      prev.map((occurrence) =>
+        occurrence.id === id
+          ? { ...occurrence, confirmations: occurrence.confirmations + 1 }
+          : occurrence,
+      ),
+    )
+    return true
+  }, [updateUserInteraction])
 
   const contestResolution = useCallback((id: string) => {
-    setOccurrences((prev) =>
-      prev.map((occ) =>
-        occ.id === id
-          ? { ...occ, contestations: occ.contestations + 1 }
-          : occ
-      )
+    const recorded = updateUserInteraction(id, (current) =>
+      current.resolutionFeedback
+        ? current
+        : { ...current, resolutionFeedback: "contestation" },
     )
-  }, [])
+    if (!recorded) return false
+
+    setOccurrences((prev) =>
+      prev.map((occurrence) =>
+        occurrence.id === id
+          ? { ...occurrence, contestations: occurrence.contestations + 1 }
+          : occurrence,
+      ),
+    )
+    return true
+  }, [updateUserInteraction])
 
   const contestExistence = useCallback((id: string) => {
-    setOccurrences((prev) =>
-      prev.map((occ) =>
-        occ.id === id
-          ? { ...occ, existenceContestations: occ.existenceContestations + 1 }
-          : occ
-      )
+    const recorded = updateUserInteraction(id, (current) =>
+      current.hasContestedExistence || current.hasSupported
+        ? current
+        : { ...current, hasContestedExistence: true },
     )
-  }, [])
+    if (!recorded) return false
+
+    setOccurrences((prev) =>
+      prev.map((occurrence) =>
+        occurrence.id === id
+          ? { ...occurrence, existenceContestations: occurrence.existenceContestations + 1 }
+          : occurrence,
+      ),
+    )
+    return true
+  }, [updateUserInteraction])
 
   const addComment = useCallback((occurrenceId: string, message: string) => {
     const newComment: Comment = {
       id: `comment-${Date.now()}`,
-      author: user?.name || "Usuario Anonimo",
+      author: nicknameRef.current || nickname || "Visitante",
       message,
       createdAt: new Date(),
     }
@@ -264,7 +333,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           : occ
       )
     )
-  }, [user?.name])
+  }, [nickname])
 
   // Statistics
   const stats = useMemo(() => {
@@ -283,12 +352,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({
-      user,
-      isAuthenticated: user !== null,
-      isAdminMode,
-      login,
-      logout,
-      toggleAdminMode,
+      nickname,
+      nicknameDialogOpen,
+      requestNickname,
+      submitNickname,
+      closeNicknameDialog,
       isDarkMode,
       toggleDarkMode,
       occurrences,
@@ -303,15 +371,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       userVotes,
       getUserVote,
       canChangeVote,
+      getUserInteraction,
       stats,
       getDynamicPriority,
     }),
     [
-      user,
-      isAdminMode,
-      login,
-      logout,
-      toggleAdminMode,
+      nickname,
+      nicknameDialogOpen,
+      requestNickname,
+      submitNickname,
+      closeNicknameDialog,
       isDarkMode,
       toggleDarkMode,
       occurrences,
@@ -326,6 +395,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       userVotes,
       getUserVote,
       canChangeVote,
+      getUserInteraction,
       stats,
       getDynamicPriority,
     ]

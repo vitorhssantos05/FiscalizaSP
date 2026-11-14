@@ -25,14 +25,17 @@ import {
 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import { OccurrenceImage } from "@/components/occurrence-image"
 
 interface OccurrenceListProps {
   onViewDetails: (occurrence: Occurrence) => void
+  allowDetails?: boolean
+  onOccurrenceSelect?: (occurrence: Occurrence) => void
 }
 
 type SortOption = "relevance" | "priority" | "supports" | "recent"
 
-export function OccurrenceList({ onViewDetails }: OccurrenceListProps) {
+export function OccurrenceList({ onViewDetails, allowDetails = true, onOccurrenceSelect }: OccurrenceListProps) {
   const { occurrences, getDynamicPriority } = useApp()
   const [search, setSearch] = useState("")
   const [categoryFilter, setCategoryFilter] = useState<OccurrenceCategory | "all">("all")
@@ -232,16 +235,29 @@ export function OccurrenceList({ onViewDetails }: OccurrenceListProps) {
             return (
               <Card
                 key={occurrence.id}
-                className={`group hover:shadow-lg transition-all duration-300 cursor-pointer border-border/50 ${
+                role={!allowDetails && onOccurrenceSelect ? "button" : undefined}
+                tabIndex={!allowDetails && onOccurrenceSelect ? 0 : undefined}
+                aria-label={!allowDetails && onOccurrenceSelect ? `Localizar ${occurrence.title} na lista` : undefined}
+                className={`group border-border/50 transition-all duration-300 ${allowDetails ? "cursor-pointer hover:shadow-lg" : onOccurrenceSelect ? "cursor-pointer hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" : ""} ${
                   isHighPriority ? "ring-2 ring-red-500/20 bg-red-500/5" : ""
                 }`}
-                onClick={() => onViewDetails(occurrence)}
+                onClick={() => allowDetails ? onViewDetails(occurrence) : onOccurrenceSelect?.(occurrence)}
+                onKeyDown={!allowDetails && onOccurrenceSelect ? (event) => {
+                  if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return
+                  event.preventDefault()
+                  onOccurrenceSelect(occurrence)
+                } : undefined}
               >
                 <CardContent className="p-4">
                   <div className="flex gap-4">
-                    {/* Image placeholder */}
-                    <div className="h-24 w-24 flex-shrink-0 rounded-md bg-muted flex items-center justify-center overflow-hidden">
-                      <MapPin className="h-8 w-8 text-muted-foreground" />
+                    <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-md bg-muted">
+                      <OccurrenceImage
+                        key={`${occurrence.id}-${occurrence.imageUrl ?? "sem-imagem"}`}
+                        src={occurrence.imageUrl}
+                        alt={`Imagem da ocorrência: ${occurrence.title}`}
+                        className="h-full w-full object-cover"
+                        fallbackClassName="flex h-full w-full items-center justify-center text-muted-foreground [&>svg]:size-8"
+                      />
                     </div>
                     
                     {/* Content */}
@@ -292,17 +308,22 @@ export function OccurrenceList({ onViewDetails }: OccurrenceListProps) {
                     </div>
                     
                     {/* Action */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onViewDetails(occurrence)
-                      }}
-                    >
-                      <Eye className="h-5 w-5" />
-                    </Button>
+                    {allowDetails ? (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Ver detalhes de ${occurrence.title}`}
+                        className="flex-shrink-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onViewDetails(occurrence)
+                        }}
+                      >
+                        <Eye className="h-5 w-5" />
+                      </Button>
+                    ) : (
+                      <span className="max-w-24 text-right text-xs text-muted-foreground">Detalhes na próxima tarefa</span>
+                    )}
                   </div>
                 </CardContent>
               </Card>

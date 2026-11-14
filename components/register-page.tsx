@@ -40,10 +40,12 @@ const MapComponent = dynamic(
 
 interface RegisterPageProps {
   onSuccess?: () => void
+  demoMode?: boolean
+  onResearchError?: () => void
 }
 
-export function RegisterPage({ onSuccess }: RegisterPageProps) {
-  const { addOccurrence } = useApp()
+export function RegisterPage({ onSuccess, demoMode = false, onResearchError }: RegisterPageProps) {
+  const { addOccurrence, requestNickname } = useApp()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
 
@@ -129,73 +131,109 @@ export function RegisterPage({ onSuccess }: RegisterPageProps) {
   }
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string)
-      }
-      reader.readAsDataURL(file)
+    const input = e.currentTarget
+    const file = input.files?.[0]
+    input.value = ""
+
+    if (!file) return
+
+    const acceptedTypes = ["image/jpeg", "image/png", "image/webp"]
+    const maxFileSize = 3 * 1024 * 1024
+
+    if (!acceptedTypes.includes(file.type)) {
+      setImagePreview(null)
+      toast.error("Formato de imagem inválido", {
+        description: "Selecione uma imagem JPEG, PNG ou WebP.",
+      })
+      return
     }
+
+    if (file.size > maxFileSize) {
+      setImagePreview(null)
+      toast.error("Imagem muito grande", {
+        description: "O tamanho máximo permitido é 3 MB.",
+      })
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setImagePreview(reader.result)
+      } else {
+        setImagePreview(null)
+        toast.error("Não foi possível carregar a imagem")
+      }
+    }
+    reader.onerror = () => {
+      setImagePreview(null)
+      toast.error("Não foi possível carregar a imagem")
+    }
+    reader.readAsDataURL(file)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     // Validation
     if (!title.trim()) {
+      onResearchError?.()
       toast.error("Preencha o título da ocorrência")
       return
     }
     if (!description.trim()) {
+      onResearchError?.()
       toast.error("Preencha a descrição da ocorrência")
       return
     }
     if (!category) {
+      onResearchError?.()
       toast.error("Selecione uma categoria")
       return
     }
     if (!selectedLocation) {
+      onResearchError?.()
       toast.error("Selecione a localização no mapa")
       return
     }
 
-    setIsSubmitting(true)
+    requestNickname(() => {
+      void (async () => {
+        setIsSubmitting(true)
+        await new Promise((resolve) => setTimeout(resolve, 1000))
 
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+        addOccurrence({
+          title: title.trim(),
+          description: description.trim(),
+          category,
+          status: "pendente",
+          initialPriority: priority,
+          neighborhood: neighborhood || "Centro",
+          address: address || "Endereço não especificado",
+          latitude: selectedLocation.lat,
+          longitude: selectedLocation.lng,
+          imageUrl: imagePreview || undefined,
+        })
 
-    addOccurrence({
-      title: title.trim(),
-      description: description.trim(),
-      category,
-      status: "pendente",
-      initialPriority: priority,
-      neighborhood: neighborhood || "Centro",
-      address: address || "Endereço não especificado",
-      latitude: selectedLocation.lat,
-      longitude: selectedLocation.lng,
-      imageUrl: imagePreview || undefined,
+        toast.success(demoMode ? "Ocorrência de teste registrada" : "Ocorrência registrada com sucesso!", {
+          description: demoMode
+            ? "Adicionada somente à sessão demonstrativa desta avaliação."
+            : "Sua denúncia foi adicionada ao sistema",
+        })
+
+        setTitle("")
+        setDescription("")
+        setCategory("")
+        setPriority("media")
+        setAddress("")
+        setNeighborhood("")
+        setSelectedLocation(null)
+        setImagePreview(null)
+        setIsSubmitting(false)
+
+        onSuccess?.()
+      })()
     })
-
-    toast.success("Ocorrência registrada com sucesso!", {
-      description: "Sua denúncia foi adicionada ao sistema",
-    })
-
-    // Reset form
-    setTitle("")
-    setDescription("")
-    setCategory("")
-    setPriority("media")
-    setAddress("")
-    setNeighborhood("")
-    setSelectedLocation(null)
-    setImagePreview(null)
-    setIsSubmitting(false)
-
-    if (onSuccess) {
-      onSuccess()
-    }
   }
 
   const isFormValid = title.trim() && description.trim() && category && selectedLocation
@@ -209,7 +247,7 @@ export function RegisterPage({ onSuccess }: RegisterPageProps) {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-8">
         {/* Basic Info */}
         <Card className="border-border/50">
           <CardHeader>
@@ -301,39 +339,55 @@ export function RegisterPage({ onSuccess }: RegisterPageProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-lg p-6 hover:border-primary/50 transition-colors">
+            <div className="flex flex-col items-center justify-center gap-4 border-2 border-dashed border-border rounded-lg p-6 hover:border-primary/50 transition-colors">
               {imagePreview ? (
-                <div className="relative w-full max-w-md">
+                <div className="w-full max-w-md">
                   <img
                     src={imagePreview}
-                    alt="Preview"
-                    className="w-full h-48 object-cover rounded-lg"
+                    alt={`Prévia da imagem da ocorrência: ${title || "imagem selecionada"}`}
+                    className="max-h-64 w-full rounded-lg object-contain"
                   />
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    className="absolute top-2 right-2"
-                    onClick={() => setImagePreview(null)}
-                  >
-                    Remover
-                  </Button>
                 </div>
               ) : (
-                <label className="cursor-pointer text-center">
+                <label
+                  htmlFor="occurrence-image"
+                  className="cursor-pointer text-center"
+                >
                   <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
                     <ImageIcon className="h-6 w-6 text-muted-foreground" />
                   </div>
                   <p className="text-sm font-medium text-foreground">Clique para enviar uma imagem</p>
-                  <p className="text-xs text-muted-foreground mt-1">PNG, JPG até 5MB</p>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleImageUpload}
-                  />
                 </label>
               )}
+              <input
+                id="occurrence-image"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="sr-only"
+                aria-describedby="occurrence-image-help"
+                onChange={handleImageUpload}
+              />
+              {imagePreview && (
+                <div className="flex flex-wrap justify-center gap-2">
+                  <label
+                    htmlFor="occurrence-image"
+                    className="inline-flex cursor-pointer items-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+                  >
+                    Substituir imagem
+                  </label>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setImagePreview(null)}
+                  >
+                    Remover imagem
+                  </Button>
+                </div>
+              )}
+              <p id="occurrence-image-help" className="text-center text-xs text-muted-foreground" aria-live="polite">
+                JPEG, PNG ou WebP, até 3 MB. A imagem fica apenas nesta sessão e não será preservada após recarregar a página.
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -347,30 +401,36 @@ export function RegisterPage({ onSuccess }: RegisterPageProps) {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-2">
-              <div className="flex-1">
-                <Input
-                  placeholder="Digite o endereço (ex: Av. Paulista, 1000)"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault()
-                      handleAddressSearch()
-                    }
-                  }}
-                />
+            {demoMode ? (
+              <p className="text-sm text-muted-foreground">
+                Selecione um ponto fictício diretamente no mapa. A busca de endereços e o GPS ficam desativados nesta tarefa.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <div className="flex-1">
+                  <Input
+                    placeholder="Digite o endereço (ex: Av. Paulista, 1000)"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.nativeEvent.isComposing && e.keyCode !== 229) {
+                        e.preventDefault()
+                        handleAddressSearch()
+                      }
+                    }}
+                  />
+                </div>
+                <Button type="button" variant="secondary" onClick={handleAddressSearch}>
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Buscar
+                </Button>
+                <Button type="button" variant="outline" onClick={handleUseMyLocation}>
+                  <Navigation className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">Minha localização</span>
+                  <span className="sm:hidden">GPS</span>
+                </Button>
               </div>
-              <Button type="button" variant="secondary" onClick={handleAddressSearch}>
-                <MapPin className="h-4 w-4 mr-2" />
-                Buscar
-              </Button>
-              <Button type="button" variant="outline" onClick={handleUseMyLocation}>
-                <Navigation className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Minha localização</span>
-                <span className="sm:hidden">GPS</span>
-              </Button>
-            </div>
+            )}
 
             {neighborhood && (
               <p className="text-sm text-muted-foreground">
@@ -418,7 +478,7 @@ export function RegisterPage({ onSuccess }: RegisterPageProps) {
             ) : (
               <>
                 <CheckCircle2 className="h-5 w-5" />
-                Registrar Ocorrência
+                {demoMode ? "Registrar ocorrência de teste" : "Registrar Ocorrência"}
               </>
             )}
           </Button>
