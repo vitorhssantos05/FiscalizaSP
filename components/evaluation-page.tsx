@@ -14,6 +14,7 @@ import { AppProvider } from "@/lib/app-context"
 import { GuidedCitizenTasks, type GuidedTaskSummary } from "@/components/guided-citizen-tasks"
 import { EvaluationQuestionnaire } from "@/components/evaluation-questionnaire"
 import { createInitialEvaluationMetrics, finalizeEvaluationMetrics, type EvaluationMetrics, type QuestionnaireMetrics } from "@/lib/evaluation-metrics"
+import { finalizeEvaluation, startEvaluation, withdrawEvaluation } from "@/lib/supabase/anonymous-participant"
 
 type ResearchPhase = "introduction" | "profile" | "review" | "transition" | "tasks" | "questionnaire" | "declined"
 type AnswerKey = "ageRange" | "socialMediaUse" | "digitalFamiliarity" | "platformExperience"
@@ -91,6 +92,7 @@ export function EvaluationPage() {
   const [answers, setAnswers] = useState<Answers>(emptyAnswers)
   const [missingAnswers, setMissingAnswers] = useState<AnswerKey[]>([])
   const [sessionMetrics, setSessionMetrics] = useState<EvaluationMetrics>(() => createInitialEvaluationMetrics())
+  const [persistenceError, setPersistenceError] = useState<string | null>(null)
   const completionSubmittedRef = useRef(false)
 
   useEffect(() => {
@@ -133,9 +135,16 @@ export function EvaluationPage() {
     if (unanswered.length === 0) setPhase("review")
   }
 
-  const finishE1 = () => {
-    setPhase("tasks")
-    window.scrollTo(0, 0)
+  const finishE1 = async () => {
+    setPersistenceError(null)
+    try {
+      await startEvaluation(answers)
+      setSessionMetrics(createInitialEvaluationMetrics())
+      setPhase("tasks")
+      window.scrollTo(0, 0)
+    } catch {
+      setPersistenceError("Não foi possível iniciar o registro seguro desta avaliação. Tente novamente.")
+    }
   }
 
   const finishTasks = (summary: GuidedTaskSummary) => {
@@ -143,7 +152,7 @@ export function EvaluationPage() {
     setPhase("questionnaire")
   }
 
-  const finishQuestionnaire = (questionnaire: QuestionnaireMetrics) => {
+  const finishQuestionnaire = async (questionnaire: QuestionnaireMetrics) => {
     if (completionSubmittedRef.current) return
 
     const completedMetrics = finalizeEvaluationMetrics(
@@ -153,6 +162,16 @@ export function EvaluationPage() {
       questionnaire,
     )
     if (!completedMetrics.questionnaireCompleted) return
+    try {
+      await finalizeEvaluation([
+        ...questionnaire.likert.map((answer) => ({ question_key: answer.questionId, answer: answer.value })),
+        { question_key: "difficulties", answer: questionnaire.openAnswers.difficulties },
+        { question_key: "improvements", answer: questionnaire.openAnswers.improvements },
+      ])
+    } catch {
+      setPersistenceError("Não foi possível salvar suas respostas com segurança. Tente novamente.")
+      return
+    }
     completionSubmittedRef.current = true
 
     try {
@@ -165,13 +184,14 @@ export function EvaluationPage() {
     setSessionStatus("completed")
   }
 
-  const abandonEvaluation = (summary?: GuidedTaskSummary) => {
+  const abandonEvaluation = async (summary?: GuidedTaskSummary) => {
     const abandonedMetrics = finalizeEvaluationMetrics(
       { ...sessionMetrics, tasks: summary?.tasks ?? sessionMetrics.tasks },
       "abandoned",
       Date.now(),
     )
     if (abandonedMetrics.status !== "abandoned") return
+    await withdrawEvaluation()
 
     clearDraft()
     setSessionMetrics(createInitialEvaluationMetrics())
@@ -195,6 +215,19 @@ export function EvaluationPage() {
     setSessionMetrics(createInitialEvaluationMetrics())
     setSessionStatus("active")
     setPhase("introduction")
+  }
+
+  if (persistenceError) {
+    return (
+      <section className="container mx-auto max-w-xl px-4 py-12" aria-live="assertive">
+        <Alert variant="destructive">
+          <AlertTriangle aria-hidden="true" />
+          <AlertTitle>Não foi possível salvar a avaliação</AlertTitle>
+          <AlertDescription>{persistenceError}</AlertDescription>
+        </Alert>
+        <Button type="button" className="mt-4" onClick={() => setPersistenceError(null)}>Tentar novamente</Button>
+      </section>
+    )
   }
 
   if (sessionStatus === "checking") {

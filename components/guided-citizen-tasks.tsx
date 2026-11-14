@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { AlertCircle, ArrowRight, Check, ClipboardList, LockKeyhole, ShieldAlert, SkipForward, X } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
@@ -111,6 +111,12 @@ export function GuidedCitizenTasks({ onFinish, onAbandon }: GuidedCitizenTasksPr
   const [taskIndex, setTaskIndex] = useState(0)
   const [attempts, setAttempts] = useState<TaskAttempt[]>(createInitialAttempts)
   const [confirmExitOpen, setConfirmExitOpen] = useState(false)
+  const [currentTime, setCurrentTime] = useState(() => Date.now())
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setCurrentTime(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -121,6 +127,15 @@ export function GuidedCitizenTasks({ onFinish, onAbandon }: GuidedCitizenTasksPr
   const allTasksFinished = taskIndex >= taskDefinitions.length
   const currentStage = Math.min(taskIndex + 1, taskDefinitions.length)
   const progress = allTasksFinished ? 80 : (currentStage / 5) * 100
+  const practicalStartedAt = attempts[0]?.startedAt
+  const practicalElapsedSeconds = practicalStartedAt === null || practicalStartedAt === undefined
+    ? 0
+    : Math.max(0, Math.floor((currentTime - practicalStartedAt) / 1000))
+  const formattedTime = useMemo(() => {
+    const minutes = Math.floor(practicalElapsedSeconds / 60).toString().padStart(2, "0")
+    const seconds = (practicalElapsedSeconds % 60).toString().padStart(2, "0")
+    return `${minutes}:${seconds}`
+  }, [practicalElapsedSeconds])
 
   const recordTaskAction = (
     action: TaskEvent | "interaction-error",
@@ -244,7 +259,11 @@ export function GuidedCitizenTasks({ onFinish, onAbandon }: GuidedCitizenTasksPr
             <ClipboardList aria-hidden="true" />
             Etapa {currentStage} de 5
           </Badge>
-          {!allTasksFinished && <span className="text-sm font-medium text-muted-foreground">Tarefa {taskIndex + 1} de 4</span>}
+            {!allTasksFinished && (
+              <div role="timer" aria-label={`Tempo das tarefas práticas: ${formattedTime}`} className="rounded-full border px-3 py-1 text-sm text-muted-foreground">
+                Tempo: <time dateTime={`PT${practicalElapsedSeconds}S`} className="font-mono text-foreground">{formattedTime}</time>
+              </div>
+            )}
         </div>
         <div className="flex flex-col gap-2">
           <Progress value={progress} aria-label="Progresso da avaliação" />

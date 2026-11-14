@@ -1,5 +1,42 @@
 import { createClient } from "@/lib/supabase/client"
 
+export async function getAnonymousParticipantId() {
+  const supabase = createClient()
+  const { data, error } = await supabase.auth.getSession()
+  if (error) throw error
+  const user = data.session?.user
+  if (!user || user.is_anonymous !== true) return null
+  return user.id
+}
+
+export async function startEvaluation(pDemographicData: Record<string, string>) {
+  const userId = await getAnonymousParticipantId()
+  if (!userId) return false
+  const { error } = await createClient().rpc("start_evaluation", {
+    p_user_id: userId,
+    p_demographic_data: pDemographicData,
+  })
+  if (error) throw error
+  return true
+}
+
+export async function finalizeEvaluation(pAnswers: unknown[]) {
+  const userId = await getAnonymousParticipantId()
+  if (!userId) return false
+  const { error } = await createClient().rpc("finalize_evaluation", {
+    p_user_id: userId,
+    p_answers: pAnswers,
+  })
+  if (error) throw error
+  return true
+}
+
+export async function withdrawEvaluation() {
+  const userId = await getAnonymousParticipantId()
+  if (!userId) return
+  await createClient().rpc("withdraw_evaluation", { p_user_id: userId })
+}
+
 export async function startAnonymousParticipant(nickname: string) {
   const normalizedNickname = nickname.trim()
 

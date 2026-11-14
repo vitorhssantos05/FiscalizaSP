@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useRef, useState } from "react"
 import { AlertCircle, ArrowLeft, ArrowRight, Check, ClipboardCheck, LockKeyhole, X } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -55,26 +55,8 @@ export function EvaluationQuestionnaire({ onFinish, onAbandon }: EvaluationQuest
   const [answers, setAnswers] = useState<QuestionnaireAnswers>(emptyAnswers)
   const [missingAnswers, setMissingAnswers] = useState<number[]>([])
   const [view, setView] = useState<"form" | "review">("form")
-  const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const questionnaireStartedAt = useRef(Date.now())
-  const timerId = useRef<number | null>(null)
   const hasFinalized = useRef(false)
-
-  useEffect(() => {
-    const updateElapsedTime = () => {
-      setElapsedSeconds(Math.floor((Date.now() - questionnaireStartedAt.current) / 1000))
-    }
-    timerId.current = window.setInterval(updateElapsedTime, 1000)
-    return () => {
-      if (timerId.current !== null) window.clearInterval(timerId.current)
-    }
-  }, [])
-
-  const formattedTime = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60).toString().padStart(2, "0")
-    const remainingSeconds = (seconds % 60).toString().padStart(2, "0")
-    return `${minutes}:${remainingSeconds}`
-  }
 
   const findMissingAnswers = () => answers.likert
     .flatMap((answer, index) => answer === null ? [index] : [])
@@ -119,7 +101,6 @@ export function EvaluationQuestionnaire({ onFinish, onAbandon }: EvaluationQuest
     if (ratings.length !== statements.length) return
     hasFinalized.current = true
     const durationSeconds = Math.floor((Date.now() - questionnaireStartedAt.current) / 1000)
-    if (timerId.current !== null) window.clearInterval(timerId.current)
     onFinish({
       likert: ratings.map((value, index) => ({ questionId: statements[index].id, kind: "rating", value })),
       durationSeconds,
@@ -138,9 +119,7 @@ export function EvaluationQuestionnaire({ onFinish, onAbandon }: EvaluationQuest
             <ClipboardCheck aria-hidden="true" />
             Etapa 5 de 5
           </Badge>
-          <div role="timer" aria-label={`Tempo no questionário: ${formattedTime(elapsedSeconds)}`} className="rounded-full border px-3 py-1 text-sm text-muted-foreground">
-            Tempo: <time dateTime={`PT${elapsedSeconds}S`} className="font-mono text-foreground">{formattedTime(elapsedSeconds)}</time>
-          </div>
+          <span className="text-sm text-muted-foreground">Questionário final</span>
         </div>
         <div>
           <h1 id="questionnaire-title" className="text-balance text-3xl font-bold tracking-tight md:text-4xl">
