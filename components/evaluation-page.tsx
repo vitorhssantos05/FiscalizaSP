@@ -14,7 +14,7 @@ import { AppProvider } from "@/lib/app-context"
 import { GuidedCitizenTasks, type GuidedTaskSummary } from "@/components/guided-citizen-tasks"
 import { EvaluationQuestionnaire } from "@/components/evaluation-questionnaire"
 import { createInitialEvaluationMetrics, finalizeEvaluationMetrics, type EvaluationMetrics, type QuestionnaireMetrics } from "@/lib/evaluation-metrics"
-import { finalizeEvaluation, startEvaluation, withdrawEvaluation } from "@/lib/supabase/anonymous-participant"
+import { finalizeEvaluation, startAnonymousParticipant, startEvaluation, withdrawEvaluation } from "@/lib/supabase/anonymous-participant"
 
 type ResearchPhase = "introduction" | "profile" | "review" | "transition" | "tasks" | "questionnaire" | "declined"
 type AnswerKey = "ageRange" | "socialMediaUse" | "digitalFamiliarity" | "platformExperience"
@@ -138,7 +138,9 @@ export function EvaluationPage() {
   const finishE1 = async () => {
     setPersistenceError(null)
     try {
-      await startEvaluation(answers)
+      await startAnonymousParticipant("Participante")
+      const started = await startEvaluation(answers)
+      if (!started) throw new Error("Sessão anônima não iniciada")
       setSessionMetrics(createInitialEvaluationMetrics())
       setPhase("tasks")
       window.scrollTo(0, 0)
@@ -252,7 +254,7 @@ export function EvaluationPage() {
               <Check aria-hidden="true" className="size-6" />
             </div>
             <CardTitle id="completed-session-title">Avaliação já concluída nesta sessão</CardTitle>
-            <CardDescription>As respostas e métricas temporárias foram descartadas. Este protótipo não confirma identidade nem impede uma pessoa de tentar responder novamente.</CardDescription>
+            <CardDescription>As respostas e métricas desta avaliação foram salvas no banco de dados. Nenhum dado pessoal identificável é coletado.</CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-sm leading-relaxed text-muted-foreground">Se outra pessoa for participar neste dispositivo, inicie uma nova sessão de demonstração. O marcador técnico não identifica participantes diferentes.</p>
@@ -334,7 +336,7 @@ export function EvaluationPage() {
           </CardHeader>
           <CardContent className="flex flex-col gap-5">
             <p className="leading-relaxed text-muted-foreground">
-              Esta pesquisa acadêmica busca entender como as pessoas se relacionam com ferramentas digitais de participação cidadã e fiscalização da infraestrutura urbana. As respostas deste protótipo são apenas demonstrativas e não serão enviadas nem armazenadas.
+              Esta pesquisa acadêmica busca entender como as pessoas se relacionam com ferramentas digitais de participação cidadã e fiscalização da infraestrutura urbana. As respostas serão salvas no banco de dados para análise agregada nos Resultados da Pesquisa.
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="flex gap-3 rounded-lg border bg-muted/30 p-4">
@@ -355,7 +357,7 @@ export function EvaluationPage() {
             <div className="rounded-lg border p-4">
               <h2 className="font-medium">O que acontece nesta etapa?</h2>
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                Você responderá perguntas gerais de perfil e, em seguida, poderá localizar ocorrências, consultar detalhes e interagir, registrar um caso demonstrativo e consultar o painel administrativo. Para concluir o questionário final, será necessário responder às dez afirmações de 1 a 5; as duas perguntas abertas serão opcionais. Você poderá revisar tudo e desistir a qualquer momento. Não há coleta oficial de dados.
+                Você responderá perguntas gerais de perfil e, em seguida, poderá localizar ocorrências, consultar detalhes e interagir, registrar um caso demonstrativo e consultar o painel administrativo. Para concluir o questionário final, será necessário responder às dez afirmações de 1 a 5; as duas perguntas abertas serão opcionais. Você poderá revisar tudo e desistir a qualquer momento. As respostas serão exibidas de forma agregada no painel de Resultados da Pesquisa.
               </p>
             </div>
             <div className="flex items-start gap-3 rounded-lg border p-4">
