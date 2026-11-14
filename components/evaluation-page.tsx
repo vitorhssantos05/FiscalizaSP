@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { AlertTriangle, ArrowLeft, ArrowRight, Check, ClipboardCheck, GraduationCap, LockKeyhole, ShieldCheck, X } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -13,9 +13,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { AppProvider } from "@/lib/app-context"
 import { GuidedCitizenTasks, type GuidedTaskSummary } from "@/components/guided-citizen-tasks"
 import { EvaluationQuestionnaire } from "@/components/evaluation-questionnaire"
+import { createInitialEvaluationMetrics, finalizeEvaluationMetrics, type EvaluationMetrics, type QuestionnaireMetrics } from "@/lib/evaluation-metrics"
 
-type ResearchPhase = "introduction" | "profile" | "review" | "transition" | "tasks" | "questionnaire" | "completed" | "declined"
-type AnswerKey = "ageRange" | "smartphoneUse" | "digitalFamiliarity" | "platformExperience"
+type ResearchPhase = "introduction" | "profile" | "review" | "transition" | "tasks" | "questionnaire" | "declined"
+type AnswerKey = "ageRange" | "socialMediaUse" | "digitalFamiliarity" | "platformExperience"
 type Answers = Record<AnswerKey, string>
 
 type Question = {
@@ -27,7 +28,7 @@ type Question = {
 
 const emptyAnswers: Answers = {
   ageRange: "",
-  smartphoneUse: "",
+  socialMediaUse: "",
   digitalFamiliarity: "",
   platformExperience: "",
 }
@@ -47,14 +48,16 @@ const questions: Question[] = [
     ],
   },
   {
-    key: "smartphoneUse",
-    title: "Com que frequência você usa um smartphone?",
-    description: "Considere o uso no seu dia a dia.",
+    key: "socialMediaUse",
+    title: "Com que frequência você utiliza redes sociais?",
+    description: "Considere o uso de redes sociais no seu dia a dia.",
     options: [
-      { value: "daily", label: "Todos os dias" },
-      { value: "weekly", label: "Algumas vezes por semana" },
+      { value: "daily", label: "Diariamente" },
+      { value: "several-times-weekly", label: "Algumas vezes por semana" },
+      { value: "once-weekly", label: "Uma vez por semana" },
       { value: "rarely", label: "Raramente" },
-      { value: "never", label: "Não uso smartphone" },
+      { value: "never", label: "Nunca" },
+      { value: "prefer-not-to-say", label: "Prefiro não responder" },
     ],
   },
   {
@@ -83,10 +86,22 @@ const stepLabels = ["Consentimento", "Perfil", "Revisão"]
 
 export function EvaluationPage() {
   const [phase, setPhase] = useState<ResearchPhase>("introduction")
+  const [sessionStatus, setSessionStatus] = useState<"checking" | "active" | "completed">("checking")
   const [consentAccepted, setConsentAccepted] = useState(false)
   const [answers, setAnswers] = useState<Answers>(emptyAnswers)
   const [missingAnswers, setMissingAnswers] = useState<AnswerKey[]>([])
-  const [taskSummary, setTaskSummary] = useState<GuidedTaskSummary | null>(null)
+  const [sessionMetrics, setSessionMetrics] = useState<EvaluationMetrics>(() => createInitialEvaluationMetrics())
+  const completionSubmittedRef = useRef(false)
+
+  useEffect(() => {
+    let completed = false
+    try {
+      completed = window.sessionStorage.getItem("fiscalizasp-evaluation-completed") === "1"
+    } catch {
+      completed = false
+    }
+    setSessionStatus(completed ? "completed" : "active")
+  }, [])
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -99,7 +114,10 @@ export function EvaluationPage() {
   }
 
   const declineParticipation = () => {
+    const endedMetrics = finalizeEvaluationMetrics(sessionMetrics, "abandoned", Date.now())
+    if (endedMetrics.status !== "abandoned") return
     clearDraft()
+    setSessionMetrics(createInitialEvaluationMetrics())
     setPhase("declined")
   }
 
@@ -118,24 +136,97 @@ export function EvaluationPage() {
   const finishE1 = () => setPhase("transition")
 
   const finishTasks = (summary: GuidedTaskSummary) => {
-    setTaskSummary(summary)
+    setSessionMetrics((current) => ({ ...current, tasks: summary.tasks }))
     setPhase("questionnaire")
   }
 
-  const finishQuestionnaire = () => {
+  const finishQuestionnaire = (questionnaire: QuestionnaireMetrics) => {
+    if (completionSubmittedRef.current) return
+
+    const completedMetrics = finalizeEvaluationMetrics(
+      sessionMetrics,
+      "completed",
+      Date.now(),
+      questionnaire,
+    )
+    if (!completedMetrics.questionnaireCompleted) return
+    completionSubmittedRef.current = true
+
+    try {
+      window.sessionStorage.setItem("fiscalizasp-evaluation-completed", "1")
+    } catch {
+      // The in-memory guard still applies if browser storage is unavailable.
+    }
     clearDraft()
-    setPhase("completed")
+    setSessionMetrics(createInitialEvaluationMetrics())
+    setSessionStatus("completed")
   }
 
-  const abandonEvaluation = () => {
+  const abandonEvaluation = (summary?: GuidedTaskSummary) => {
+    const abandonedMetrics = finalizeEvaluationMetrics(
+      { ...sessionMetrics, tasks: summary?.tasks ?? sessionMetrics.tasks },
+      "abandoned",
+      Date.now(),
+    )
+    if (abandonedMetrics.status !== "abandoned") return
+
     clearDraft()
+    setSessionMetrics(createInitialEvaluationMetrics())
     setPhase("declined")
   }
 
   const restart = () => {
     clearDraft()
-    setTaskSummary(null)
+    setSessionMetrics(createInitialEvaluationMetrics())
     setPhase("introduction")
+  }
+
+  const startAnotherParticipant = () => {
+    completionSubmittedRef.current = false
+    try {
+      window.sessionStorage.removeItem("fiscalizasp-evaluation-completed")
+    } catch {
+      // No persistent identity or answers are used for this provisional marker.
+    }
+    clearDraft()
+    setSessionMetrics(createInitialEvaluationMetrics())
+    setSessionStatus("active")
+    setPhase("introduction")
+  }
+
+  if (sessionStatus === "checking") {
+    return (
+      <section className="container mx-auto max-w-xl px-4 py-12" aria-live="polite">
+        <Card>
+          <CardHeader>
+            <CardTitle>Verificando esta sessão</CardTitle>
+            <CardDescription>Um momento enquanto conferimos se a avaliação já foi concluída nesta aba.</CardDescription>
+          </CardHeader>
+        </Card>
+      </section>
+    )
+  }
+
+  if (sessionStatus === "completed") {
+    return (
+      <section className="container mx-auto max-w-xl px-4 py-12" aria-labelledby="completed-session-title">
+        <Card>
+          <CardHeader>
+            <div className="mb-2 flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Check aria-hidden="true" className="size-6" />
+            </div>
+            <CardTitle id="completed-session-title">Avaliação já concluída nesta sessão</CardTitle>
+            <CardDescription>As respostas e métricas temporárias foram descartadas. Este protótipo não confirma identidade nem impede uma pessoa de tentar responder novamente.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm leading-relaxed text-muted-foreground">Se outra pessoa for participar neste dispositivo, inicie uma nova sessão de demonstração. O marcador técnico não identifica participantes diferentes.</p>
+          </CardContent>
+          <CardFooter className="border-t pt-6">
+            <Button type="button" onClick={startAnotherParticipant}>Iniciar sessão para outra pessoa</Button>
+          </CardFooter>
+        </Card>
+      </section>
+    )
   }
 
   if (phase === "tasks") {
@@ -161,7 +252,7 @@ export function EvaluationPage() {
             <GraduationCap aria-hidden="true" />
             Pesquisa acadêmica · TGI-II
           </Badge>
-          {phase !== "declined" && phase !== "transition" && phase !== "completed" && (
+          {phase !== "declined" && phase !== "transition" && (
             <span className="text-sm text-muted-foreground">Preparação da avaliação</span>
           )}
         </div>
@@ -391,36 +482,6 @@ export function EvaluationPage() {
             <Button type="button" onClick={() => setPhase("tasks")}>
               Iniciar etapa 1
               <ArrowRight data-icon="inline-end" />
-            </Button>
-          </CardFooter>
-        </Card>
-      )}
-
-      {phase === "completed" && (
-        <Card>
-          <CardHeader>
-            <div className="mb-2 flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <Check aria-hidden="true" className="size-6" />
-            </div>
-            <CardTitle>Avaliação demonstrativa concluída</CardTitle>
-            <CardDescription>Obrigado por avaliar sua experiência com o FiscalizaSP.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <p className="text-sm text-muted-foreground">
-              Tarefas práticas concluídas: {taskSummary?.completed ?? 0} · Puladas: {taskSummary?.skipped ?? 0}.
-            </p>
-            <Alert>
-              <LockKeyhole aria-hidden="true" />
-              <AlertTitle>Dados de teste descartados</AlertTitle>
-              <AlertDescription>Nenhuma ocorrência, comentário, apoio ou voto desta avaliação foi publicado ou preservado.</AlertDescription>
-            </Alert>
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              Esta avaliação ainda é demonstrativa e não constitui uma coleta oficial de dados científicos.
-            </p>
-          </CardContent>
-          <CardFooter className="border-t pt-6">
-            <Button type="button" variant="outline" onClick={restart}>
-              Voltar ao início da apresentação
             </Button>
           </CardFooter>
         </Card>

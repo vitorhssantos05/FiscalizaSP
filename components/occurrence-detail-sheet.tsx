@@ -269,7 +269,7 @@ export function OccurrenceDetailSheet({
             <SheetTitle className="text-left pr-8 line-clamp-2">{occurrence.title}</SheetTitle>
           </SheetHeader>
 
-          <div className="flex-1 overflow-y-auto p-6 pt-4">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-6 pt-4">
             <div className="space-y-6 pb-6">
               <div className="aspect-video overflow-hidden rounded-lg bg-muted">
                 <OccurrenceImage

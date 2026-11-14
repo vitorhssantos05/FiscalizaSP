@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Textarea } from "@/components/ui/textarea"
+import type { QuestionnaireMetrics } from "@/lib/evaluation-metrics"
 
 const statements = [
   "A interface do FiscalizaSP é simples e fácil de utilizar.",
@@ -47,7 +48,7 @@ const emptyAnswers: QuestionnaireAnswers = {
 }
 
 interface EvaluationQuestionnaireProps {
-  onFinish: () => void
+  onFinish: (answers: QuestionnaireMetrics) => void
   onAbandon: () => void
 }
 
@@ -66,6 +67,20 @@ export function EvaluationQuestionnaire({ onFinish, onAbandon }: EvaluationQuest
   const getAnswerLabel = (value: LikertAnswer) => {
     if (value === null) return "Sem resposta"
     return scale.find((option) => option.value === String(value))?.label ?? "Sem resposta"
+  }
+
+  const finishQuestionnaire = () => {
+    onFinish({
+      likert: answers.likert.map((answer) => answer === null
+        ? { kind: "unanswered" }
+        : answer === "prefer-not"
+          ? { kind: "declined" }
+          : { kind: "rating", value: answer }),
+      openAnswers: {
+        difficulties: answers.difficulties.trim() || null,
+        improvements: answers.improvements.trim() || null,
+      },
+    })
   }
 
   return (
@@ -215,7 +230,7 @@ export function EvaluationQuestionnaire({ onFinish, onAbandon }: EvaluationQuest
               </Button>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Button type="button" variant="ghost" onClick={onAbandon}>Desistir e descartar</Button>
-                <Button type="button" onClick={onFinish}>
+                <Button type="button" onClick={finishQuestionnaire}>
                   Finalizar avaliação
                   <Check data-icon="inline-end" />
                 </Button>

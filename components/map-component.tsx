@@ -357,14 +357,14 @@ export function MapComponent({
             aria-label={legendCollapsed ? "Expandir legenda do mapa" : "Minimizar legenda do mapa"}
           >
             <Info aria-hidden="true" className="legend-header-icon" />
-            <span className="flex-1 text-left">Legenda do Mapa</span>
+            <span className="flex-1 text-left">Legenda do mapa</span>
             {legendCollapsed ? <ChevronDown aria-hidden="true" className="size-4" /> : <ChevronUp aria-hidden="true" className="size-4" />}
           </button>
 
           <div id={legendContentId} className={`legend-content ${legendCollapsed ? 'legend-collapsed' : ''}`}>
           {/* Seção: Status (Borda do Marcador) */}
           <div className="legend-section">
-            <h4 className="legend-section-title">Status (Borda)</h4>
+            <h4 className="legend-section-title">Status · borda</h4>
             <div className="legend-items">
               {/* Resolvida */}
               <div className="legend-item">
@@ -422,7 +422,7 @@ export function MapComponent({
 
           {/* Seção: Prioridade (Cor Interna) */}
           <div className="legend-section">
-            <h4 className="legend-section-title">Prioridade (Cor Interna)</h4>
+            <h4 className="legend-section-title">Prioridade · cor interna</h4>
             <div className="legend-items">
               {/* Alta */}
               <div className="legend-item">

@@ -12,6 +12,7 @@ import { AdminEvaluationStage, type AdminEvaluationEvent } from "@/components/ad
 import { ExplorePage } from "@/components/explore-page"
 import { RegisterPage } from "@/components/register-page"
 import type { ResearchAction } from "@/components/occurrence-detail-sheet"
+import { createTaskMetrics, type EvaluationTaskMetric } from "@/lib/evaluation-metrics"
 
 type CitizenTaskId = "find-occurrence" | "interact-with-occurrence" | "register-test"
 type TaskEvent = Exclude<ResearchAction, "interaction-error"> | "occurrence-added" | AdminEvaluationEvent
@@ -36,8 +37,7 @@ type TaskAttempt = {
 }
 
 export type GuidedTaskSummary = {
-  completed: number
-  skipped: number
+  tasks: EvaluationTaskMetric[]
 }
 
 const taskDefinitions: TaskDefinition[] = [
@@ -61,8 +61,8 @@ const taskDefinitions: TaskDefinition[] = [
   },
   {
     id: "admin-panel",
-    title: "Consultar o painel administrativo",
-    instruction: "Acesse os indicadores gerais, os gráficos por categoria, status e prioridade e a tabela de ocorrências. Não é necessário interpretar os gráficos nem alterar dados.",
+    title: "Alterar o status de uma ocorrência",
+    instruction: "Selecione no painel demonstrativo uma ocorrência Pendente e altere o status para Em análise. A tarefa será concluída somente quando a mudança aparecer nos dados isolados.",
     view: "admin",
   },
 ]
@@ -96,7 +96,7 @@ function isTaskCompleted(taskIndex: number, attempt: TaskAttempt) {
     case "register-test":
       return events.includes("occurrence-added")
     case "admin-panel":
-      return events.includes("admin-panel-consulted")
+      return events.includes("admin-status-changed")
     default:
       return false
   }
@@ -104,7 +104,7 @@ function isTaskCompleted(taskIndex: number, attempt: TaskAttempt) {
 
 interface GuidedCitizenTasksProps {
   onFinish: (summary: GuidedTaskSummary) => void
-  onAbandon: () => void
+  onAbandon: (summary: GuidedTaskSummary) => void
 }
 
 export function GuidedCitizenTasks({ onFinish, onAbandon }: GuidedCitizenTasksProps) {
@@ -129,7 +129,7 @@ export function GuidedCitizenTasks({ onFinish, onAbandon }: GuidedCitizenTasksPr
     setAttempts((current) => current.map((attempt, index) => {
       if (index !== taskIndex || attempt.status !== "in-progress") return attempt
 
-      if (action === "interaction-error") {
+      if (action === "interaction-error" || action === "admin-status-attempt-failed") {
         return { ...attempt, result: options.result ?? attempt.result, errorCount: attempt.errorCount + 1 }
       }
 
@@ -162,12 +162,16 @@ export function GuidedCitizenTasks({ onFinish, onAbandon }: GuidedCitizenTasksPr
   const recordOccurrenceLocation = (view: "map" | "list", occurrenceId: string) => {
     setAttempts((current) => current.map((attempt, index) => {
       if (index !== taskIndex || attempt.status !== "in-progress" || taskDefinitions[index]?.id !== "find-occurrence") return attempt
+      const previousSelection = view === "map" ? attempt.mapOccurrenceId : attempt.listOccurrenceId
+      const otherSelection = view === "map" ? attempt.listOccurrenceId : attempt.mapOccurrenceId
       const updated = view === "map"
         ? { ...attempt, mapOccurrenceId: occurrenceId }
         : { ...attempt, listOccurrenceId: occurrenceId }
+      const failedSelection = otherSelection !== null && otherSelection !== occurrenceId && previousSelection !== occurrenceId
       const completed = isTaskCompleted(index, updated)
       return {
         ...updated,
+        errorCount: attempt.errorCount + Number(failedSelection),
         status: completed ? "completed" : attempt.status,
         completedAt: completed ? attempt.completedAt ?? Date.now() : null,
       }
@@ -200,20 +204,26 @@ export function GuidedCitizenTasks({ onFinish, onAbandon }: GuidedCitizenTasksPr
     if (nextIndex < taskDefinitions.length) startTask(nextIndex)
   }
 
+  const toTaskMetrics = (taskAttempts: TaskAttempt[]) => createTaskMetrics(
+    taskDefinitions.map((definition, index) => ({
+      taskId: definition.id,
+      ...taskAttempts[index],
+    })),
+  )
+
   const confirmAbandon = () => {
-    setAttempts((current) => current.map((attempt, index) =>
+    const endedAt = Date.now()
+    const finalAttempts = attempts.map((attempt, index) =>
       index === taskIndex && attempt.status === "in-progress"
-        ? { ...attempt, status: "abandoned", abandonedAt: Date.now() }
+        ? { ...attempt, status: "abandoned" as const, abandonedAt: endedAt }
         : attempt,
-    ))
-    onAbandon()
+    )
+    setAttempts(finalAttempts)
+    onAbandon({ tasks: toTaskMetrics(finalAttempts) })
   }
 
   const finishPracticalTasks = () => {
-    onFinish({
-      completed: attempts.filter((attempt) => attempt.status === "completed").length,
-      skipped: attempts.filter((attempt) => attempt.status === "skipped").length,
-    })
+    onFinish({ tasks: toTaskMetrics(attempts) })
   }
 
   const mapLocationSelected = Boolean(currentAttempt?.mapOccurrenceId)
