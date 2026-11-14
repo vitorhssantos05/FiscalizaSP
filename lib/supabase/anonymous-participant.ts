@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client"
+import type { Json } from "@/lib/supabase/database.types"
 
 export async function getAnonymousParticipantId() {
   const supabase = createClient()
@@ -20,7 +21,7 @@ export async function startEvaluation(pDemographicData: Record<string, string>) 
   return true
 }
 
-export async function finalizeEvaluation(pAnswers: unknown[]) {
+export async function finalizeEvaluation(pAnswers: Json[]) {
   const userId = await getAnonymousParticipantId()
   if (!userId) return false
   const { error } = await createClient().rpc("finalize_evaluation", {

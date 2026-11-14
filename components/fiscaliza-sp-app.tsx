@@ -8,6 +8,7 @@ import { ExplorePage } from "@/components/explore-page"
 import { RegisterPage } from "@/components/register-page"
 import { AdminPage } from "@/components/admin-page"
 import { EvaluationPage } from "@/components/evaluation-page"
+import { AdminResultsPage } from "@/components/admin-results-page"
 import { Toaster } from "@/components/ui/sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -54,6 +55,8 @@ function AppContent() {
         return <RegisterPage onSuccess={() => setCurrentPage("explore")} />
       case "admin":
         return isAdminDemoMode ? <AdminPage /> : <HomePage onNavigate={setCurrentPage} />
+      case "results":
+        return <AdminResultsPage />
       case "evaluation":
         return <EvaluationPage />
       default:
