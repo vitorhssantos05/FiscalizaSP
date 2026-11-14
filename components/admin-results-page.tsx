@@ -1,13 +1,11 @@
 "use client"
 
-import { useState } from "react"
-import { Download, LockKeyhole, RefreshCw } from "lucide-react"
+import { useEffect, useState } from "react"
+import { Download, RefreshCw } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 type Results = {
@@ -26,47 +24,26 @@ function csvValue(value: unknown) {
 }
 
 export function AdminResultsPage() {
-  const [adminName, setAdminName] = useState("")
-  const [accessCode, setAccessCode] = useState("")
   const [results, setResults] = useState<Results | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [authenticated, setAuthenticated] = useState(false)
+  const [loading, setLoading] = useState(true)
 
-  const loadResults = async (shouldSignIn = true) => {
+  const loadResults = async () => {
     setLoading(true)
     setError(null)
-    if (shouldSignIn) {
-      const loginResponse = await fetch("/api/admin/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: adminName, code: accessCode }), credentials: "include" })
-      if (!loginResponse.ok) {
-        const payload = await loginResponse.json().catch(() => ({}))
-        setError(payload.error ?? "Não foi possível validar o acesso.")
-        setLoading(false)
-        return
-      }
-    }
-    const response = await fetch("/api/admin/evaluation-results", { cache: "no-store", credentials: "include" })
+    const response = await fetch("/api/admin/evaluation-results", { cache: "no-store" })
     const payload = await response.json().catch(() => ({}))
     if (!response.ok) {
-      if (response.status === 403) setError(payload.error ?? "A conta autenticada não tem permissão administrativa.")
-      else if (response.status === 401) setError("O servidor não reconheceu a sessão administrativa. Verifique se os cookies estão habilitados e entre novamente.")
-      else setError("Falha de comunicação com o servidor ao consultar o Supabase.")
-      setAuthenticated(response.status !== 401)
+      setError(payload.error ?? "Falha de comunicação com o servidor ao consultar o Supabase.")
     } else {
       setResults(payload)
-      setAuthenticated(true)
     }
     setLoading(false)
   }
 
-  const logout = async () => {
-    await fetch("/api/admin/session", { method: "DELETE", credentials: "include" })
-    setResults(null)
-    setAuthenticated(false)
-    setAdminName("")
-    setAccessCode("")
-    setError("Sessão administrativa encerrada.")
-  }
+  useEffect(() => {
+    void loadResults()
+  }, [])
 
   const exportCsv = () => {
     if (!results) return
@@ -94,16 +71,9 @@ export function AdminResultsPage() {
     return (
       <section className="container mx-auto max-w-xl px-4 py-12">
         <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2"><LockKeyhole className="size-5" />Resultados da Pesquisa</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Resultados da Pesquisa</CardTitle></CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <p className="text-sm text-muted-foreground">Informe o nome e o código privado configurados pelo proprietário do projeto.</p>
-            <div className="flex flex-col gap-2"><Label htmlFor="admin-name">Nome de administrador</Label><Input id="admin-name" autoComplete="username" value={adminName} onChange={(event) => setAdminName(event.target.value)} /></div>
-            <div className="flex flex-col gap-2"><Label htmlFor="admin-code">Código de acesso</Label><Input id="admin-code" type="password" autoComplete="current-password" value={accessCode} onChange={(event) => setAccessCode(event.target.value)} /></div>
-            {error && <Alert variant="destructive"><AlertTitle>Acesso negado</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button className="flex-1" onClick={() => loadResults(true)} disabled={loading || !adminName.trim() || !accessCode}>{loading ? "Validando..." : "Entrar nos Resultados"}</Button>
-              <Button className="flex-1" variant="outline" onClick={() => loadResults(false)} disabled={loading}>Verificar sessão existente</Button>
-            </div>
+            {loading ? <p className="text-sm text-muted-foreground">Carregando resultados...</p> : <><Alert variant="destructive"><AlertTitle>Não foi possível carregar</AlertTitle><AlertDescription>{error}</AlertDescription></Alert><Button onClick={() => void loadResults()}>Tentar novamente</Button></>}
           </CardContent>
         </Card>
       </section>
@@ -112,7 +82,7 @@ export function AdminResultsPage() {
 
   return (
     <section className="container mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8">
-      <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-bold">Resultados da Pesquisa</h1><p className="text-sm text-muted-foreground">Dados reais retornados pelo Supabase, protegidos por autenticação administrativa.</p></div><div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => loadResults(false)}><RefreshCw className="mr-2 size-4" />Atualizar</Button><Button variant="outline" onClick={logout}>Sair</Button><Button onClick={exportCsv}><Download className="mr-2 size-4" />Exportar CSV</Button></div></div>
+      <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-bold">Resultados da Pesquisa</h1><p className="text-sm text-muted-foreground">Dados reais retornados pelo Supabase.</p></div><div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => void loadResults()}><RefreshCw className="mr-2 size-4" />Atualizar</Button><Button onClick={exportCsv}><Download className="mr-2 size-4" />Exportar CSV</Button></div></div>
       {results.totals.participants === 0 ? <Alert><AlertTitle>Nenhuma avaliação registrada</AlertTitle><AlertDescription>Os resultados aparecerão aqui quando participantes concluírem ou abandonarem a avaliação.</AlertDescription></Alert> : <>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[["Participantes", results.totals.participants], ["Concluídas", results.totals.completed], ["Abandonos", results.totals.abandoned], ["Taxa de conclusão", results.totals.completionRate === null ? "—" : `${(results.totals.completionRate * 100).toFixed(1)}%`]].map(([label, value]) => <Card key={String(label)}><CardContent className="pt-6"><p className="text-2xl font-bold">{value}</p><p className="text-sm text-muted-foreground">{label}</p></CardContent></Card>)}</div>
         <Card><CardHeader><CardTitle>Tempos e conclusão por tarefa</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Tarefa</TableHead><TableHead>Concluídas</TableHead><TableHead>Taxa</TableHead><TableHead>Tempo médio</TableHead></TableRow></TableHeader><TableBody>{results.taskSummary.map((task) => <TableRow key={task.taskKey}><TableCell><Badge variant="outline">{task.taskKey}</Badge></TableCell><TableCell>{task.completed}</TableCell><TableCell>{task.completionRate === null ? "—" : `${(task.completionRate * 100).toFixed(1)}%`}</TableCell><TableCell>{formatSeconds(task.averageDurationMs)}</TableCell></TableRow>)}<TableRow><TableCell>Questionário</TableCell><TableCell>{results.totals.completed}</TableCell><TableCell>—</TableCell><TableCell>{formatSeconds(results.totals.averageQuestionnaireDurationMs)}</TableCell></TableRow></TableBody></Table></CardContent></Card>
