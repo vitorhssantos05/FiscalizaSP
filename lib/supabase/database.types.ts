@@ -35,12 +35,18 @@ type Category = "buraco" | "iluminacao" | "vazamento" | "lixo" | "sinalizacao" |
 type Status = "pendente" | "em_analise" | "resolvida"
 type Priority = "baixa" | "media" | "alta"
 type FeedbackType = "confirmacao_resolucao" | "contestacao_resolucao" | "contestacao_existencia"
+type EvaluationParticipantStatus = "in_progress" | "completed" | "withdrawn"
+type EvaluationTaskStatus = "in_progress" | "completed" | "failed" | "skipped" | "interrupted"
 
 type Profile = {
   user_id: string
   nickname: string | null
   created_at: string
   updated_at: string
+}
+type AdminUser = {
+  user_id: string
+  granted_at: string
 }
 type Occurrence = {
   id: string
@@ -101,6 +107,13 @@ type EvaluationParticipant = {
   consent_given: boolean
   consented_at: string | null
   demographic_data: Json
+  status: EvaluationParticipantStatus
+  started_at: string | null
+  questionnaire_started_at: string | null
+  completed_at: string | null
+  withdrawn_at: string | null
+  total_duration_ms: number | null
+  questionnaire_duration_ms: number | null
   created_at: string
   updated_at: string
 }
@@ -108,6 +121,8 @@ type EvaluationTask = {
   id: string
   participant_id: string
   task_key: string
+  attempt_number: number
+  status: EvaluationTaskStatus
   started_at: string | null
   completed_at: string | null
   duration_ms: number | null
@@ -126,6 +141,7 @@ export type Database = {
   __InternalSupabase: { PostgrestVersion: "14.18" }
   public: {
     Tables: {
+      admin_users: Table<AdminUser, "user_id">,
       profiles: Table<Profile, "user_id">
       occurrences: Table<
         Occurrence,
@@ -180,10 +196,23 @@ export type Database = {
         [Relationship<"evaluation_answers_participant_id_fkey", "participant_id", "evaluation_participants", "user_id">]
       >
     }
-    Views: { [_ in never]: never }
+    Views: {
+      occurrence_priority_weights: {
+        Row: { occurrence_id: string; vote_count: number; weighted_score: number }
+        Relationships: []
+      }
+    }
     Functions: {
       cast_priority_vote: { Args: { p_occurrence_id: string; p_priority: Priority }; Returns: undefined }
+      finalize_evaluation: { Args: { p_answers: Json; p_user_id: string }; Returns: undefined }
+      finish_evaluation_task: { Args: { p_result: Json; p_status: string; p_task_id: string; p_user_id: string }; Returns: undefined }
       is_anonymous_participant: { Args: never; Returns: boolean }
+      set_occurrence_resolution_feedback: { Args: { p_feedback_type: FeedbackType; p_occurrence_id: string }; Returns: undefined }
+      set_occurrence_status: { Args: { p_occurrence_id: string; p_status: Status }; Returns: undefined }
+      start_evaluation: { Args: { p_demographic_data: Json; p_user_id: string }; Returns: undefined }
+      start_evaluation_questionnaire: { Args: { p_user_id: string }; Returns: undefined }
+      start_evaluation_task: { Args: { p_task_key: string; p_user_id: string }; Returns: string }
+      withdraw_evaluation: { Args: { p_user_id: string }; Returns: undefined }
     }
     Enums: {
       occurrence_category: Category

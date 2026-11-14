@@ -23,6 +23,7 @@ CREATE OR REPLACE FUNCTION public.set_updated_at()
 RETURNS trigger LANGUAGE plpgsql SET search_path = '' AS $$
 BEGIN NEW.updated_at := now(); RETURN NEW; END;
 $$;
+REVOKE ALL ON FUNCTION public.set_updated_at() FROM PUBLIC, anon, authenticated;
 
 CREATE TABLE IF NOT EXISTS public.profiles (
   user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -58,6 +59,14 @@ REVOKE ALL ON FUNCTION public.handle_anonymous_auth_user() FROM PUBLIC, anon, au
 DROP TRIGGER IF EXISTS fiscalizasp_create_anonymous_profile ON auth.users;
 CREATE TRIGGER fiscalizasp_create_anonymous_profile AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_anonymous_auth_user();
+
+CREATE TABLE IF NOT EXISTS public.admin_users (
+  user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  granted_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE public.admin_users ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.admin_users FROM PUBLIC, anon, authenticated;
+GRANT ALL ON public.admin_users TO service_role;
 
 CREATE TABLE IF NOT EXISTS public.occurrences (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -153,7 +162,7 @@ CREATE TABLE IF NOT EXISTS public.priority_votes (
   occurrence_id uuid NOT NULL REFERENCES public.occurrences(id) ON DELETE CASCADE,
   user_id uuid NOT NULL REFERENCES public.profiles(user_id) ON DELETE CASCADE,
   priority public.priority_level NOT NULL,
-  change_count smallint NOT NULL DEFAULT 0 CHECK (change_count BETWEEN 0 AND 1),
+  change_count integer NOT NULL DEFAULT 0 CHECK (change_count >= 0),
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (occurrence_id, user_id)
@@ -218,11 +227,7 @@ BEGIN
     ON CONFLICT (occurrence_id, user_id) DO UPDATE
       SET priority = EXCLUDED.priority,
           change_count = public.priority_votes.change_count + CASE WHEN public.priority_votes.priority IS DISTINCT FROM EXCLUDED.priority THEN 1 ELSE 0 END,
-          updated_at = now()
-      WHERE public.priority_votes.change_count < 1 OR public.priority_votes.priority = EXCLUDED.priority;
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'priority_vote_change_limit_reached' USING ERRCODE = '42501';
-  END IF;
+          updated_at = now();
 END;
 $$;
 REVOKE ALL ON FUNCTION public.cast_priority_vote(uuid, public.priority_level) FROM PUBLIC, anon;
@@ -249,20 +254,47 @@ CREATE TABLE IF NOT EXISTS public.occurrence_feedback (
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (occurrence_id, user_id, feedback_type)
 );
+CREATE UNIQUE INDEX IF NOT EXISTS occurrence_feedback_resolution_once_idx
+  ON public.occurrence_feedback (occurrence_id, user_id)
+  WHERE feedback_type IN ('confirmacao_resolucao', 'contestacao_resolucao');
 CREATE INDEX IF NOT EXISTS occurrence_feedback_occurrence_idx ON public.occurrence_feedback (occurrence_id, feedback_type);
 ALTER TABLE public.occurrence_feedback ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS occurrence_feedback_public_read ON public.occurrence_feedback;
 CREATE POLICY occurrence_feedback_public_read ON public.occurrence_feedback FOR SELECT TO anon, authenticated USING (true);
 DROP POLICY IF EXISTS occurrence_feedback_insert_owner ON public.occurrence_feedback;
-CREATE POLICY occurrence_feedback_insert_owner ON public.occurrence_feedback FOR INSERT TO authenticated
-  WITH CHECK (
-    user_id = (SELECT auth.uid()) AND (SELECT public.is_anonymous_participant())
-    AND EXISTS (SELECT 1 FROM public.profiles p WHERE p.user_id = (SELECT auth.uid()) AND p.nickname IS NOT NULL)
-    AND EXISTS (SELECT 1 FROM public.occurrences o WHERE o.id = occurrence_feedback.occurrence_id)
-  );
 REVOKE ALL ON public.occurrence_feedback FROM anon, authenticated;
 GRANT SELECT (id, occurrence_id, feedback_type, created_at) ON public.occurrence_feedback TO anon, authenticated;
-GRANT INSERT (occurrence_id, user_id, feedback_type) ON public.occurrence_feedback TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.set_occurrence_resolution_feedback(
+  p_occurrence_id uuid,
+  p_feedback_type public.occurrence_feedback_type
+)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+DECLARE v_user_id uuid := auth.uid();
+BEGIN
+  IF v_user_id IS NULL
+    OR p_feedback_type NOT IN ('confirmacao_resolucao', 'contestacao_resolucao')
+    OR NOT public.is_anonymous_participant()
+    OR NOT EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.user_id = v_user_id AND p.nickname IS NOT NULL
+    ) THEN
+    RAISE EXCEPTION 'anonymous_identity_and_resolution_feedback_required' USING ERRCODE = '42501';
+  END IF;
+
+  DELETE FROM public.occurrence_feedback
+  WHERE occurrence_id = p_occurrence_id
+    AND user_id = v_user_id
+    AND feedback_type IN ('confirmacao_resolucao', 'contestacao_resolucao')
+    AND feedback_type <> p_feedback_type;
+
+  INSERT INTO public.occurrence_feedback (occurrence_id, user_id, feedback_type)
+  VALUES (p_occurrence_id, v_user_id, p_feedback_type)
+  ON CONFLICT (occurrence_id, user_id, feedback_type) DO NOTHING;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.set_occurrence_resolution_feedback(uuid, public.occurrence_feedback_type) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.set_occurrence_resolution_feedback(uuid, public.occurrence_feedback_type) TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.maintain_occurrence_feedback_counts()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
@@ -342,19 +374,57 @@ CREATE TRIGGER evaluation_participants_set_updated_at BEFORE UPDATE ON public.ev
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-  VALUES ('occurrence-images', 'occurrence-images', true, 8388608, ARRAY['image/jpeg', 'image/png', 'image/webp']::text[])
-  ON CONFLICT (id) DO UPDATE SET public = EXCLUDED.public, file_size_limit = EXCLUDED.file_size_limit, allowed_mime_types = EXCLUDED.allowed_mime_types;
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+  VALUES ('occurrence-images', 'occurrence-images', false, 3145728, ARRAY['image/jpeg', 'image/png', 'image/webp']::text[])
+  ON CONFLICT (id) DO NOTHING;
 DROP POLICY IF EXISTS occurrence_images_public_read ON storage.objects;
-CREATE POLICY occurrence_images_public_read ON storage.objects FOR SELECT TO anon, authenticated USING (bucket_id = 'occurrence-images');
+DROP POLICY IF EXISTS occurrence_images_owner_read ON storage.objects;
+CREATE POLICY occurrence_images_owner_read ON storage.objects FOR SELECT TO authenticated
+  USING (
+    bucket_id = 'occurrence-images'
+    AND (storage.foldername(name))[1] = (SELECT auth.uid())::text
+    AND (SELECT public.is_anonymous_participant())
+  );
 DROP POLICY IF EXISTS occurrence_images_insert_own_path ON storage.objects;
 CREATE POLICY occurrence_images_insert_own_path ON storage.objects FOR INSERT TO authenticated
   WITH CHECK (
     bucket_id = 'occurrence-images'
     AND (storage.foldername(name))[1] = (SELECT auth.uid())::text
     AND (storage.foldername(name))[2] ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+    AND pg_catalog.array_length(storage.foldername(name), 1) = 2
+    AND storage.filename(name) ~* '[.](jpg|jpeg|png|webp)$'
     AND (SELECT public.is_anonymous_participant())
   );
 DROP POLICY IF EXISTS occurrence_images_delete_own_path ON storage.objects;
 CREATE POLICY occurrence_images_delete_own_path ON storage.objects FOR DELETE TO authenticated
   USING (bucket_id = 'occurrence-images' AND (storage.foldername(name))[1] = (SELECT auth.uid())::text AND (SELECT public.is_anonymous_participant()));
+
+CREATE OR REPLACE FUNCTION public.set_occurrence_status(
+  p_occurrence_id uuid,
+  p_status public.occurrence_status
+)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+DECLARE v_user_id uuid := auth.uid();
+BEGIN
+  IF v_user_id IS NULL
+    OR public.is_anonymous_participant()
+    OR NOT EXISTS (SELECT 1 FROM public.admin_users a WHERE a.user_id = v_user_id) THEN
+    RAISE EXCEPTION 'trusted_admin_required' USING ERRCODE = '42501';
+  END IF;
+
+  UPDATE public.occurrences SET status = p_status WHERE id = p_occurrence_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'occurrence_not_found' USING ERRCODE = 'P0002';
+  END IF;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.set_occurrence_status(uuid, public.occurrence_status) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.set_occurrence_status(uuid, public.occurrence_status) TO authenticated;
+
+CREATE OR REPLACE VIEW public.occurrence_priority_weights
+WITH (security_invoker = true) AS
+SELECT
+  id AS occurrence_id,
+  priority_votes_baixa + priority_votes_media + priority_votes_alta AS vote_count,
+  priority_votes_baixa + (2 * priority_votes_media) + (3 * priority_votes_alta) AS weighted_score
+FROM public.occurrences;
+GRANT SELECT ON public.occurrence_priority_weights TO anon, authenticated;

@@ -12,7 +12,7 @@ WITH CHECK (
     image_path IS NULL
     OR image_path ~* (
       '^' || (SELECT auth.uid())::text
-      || '/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[^/]+$'
+      || '/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[^/]+[.](jpg|jpeg|png|webp)$'
     )
   )
   AND (SELECT public.is_anonymous_participant())
