@@ -67,7 +67,8 @@ export function ExplorePage({ embedded = false, allowDetails = true, onResearchA
         <div>
           <h1 className="text-lg sm:text-xl font-bold text-foreground">Explorar Ocorrências</h1>
           <p className="text-xs sm:text-sm text-muted-foreground">
-            {occurrences.length} ocorrência{occurrences.length !== 1 ? "s" : ""} registrada{occurrences.length !== 1 ? "s" : ""}
+            {occurrences.length} ocorrência{occurrences.length !== 1 ? "s" : ""} disponível{occurrences.length !== 1 ? "s" : ""}
+            <span className="ml-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-amber-700 dark:text-amber-300">Exemplos demonstrativos</span>
           </p>
         </div>
         <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "map" | "list")}>

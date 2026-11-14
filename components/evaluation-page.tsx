@@ -133,7 +133,10 @@ export function EvaluationPage() {
     if (unanswered.length === 0) setPhase("review")
   }
 
-  const finishE1 = () => setPhase("transition")
+  const finishE1 = () => {
+    setPhase("tasks")
+    window.scrollTo(0, 0)
+  }
 
   const finishTasks = (summary: GuidedTaskSummary) => {
     setSessionMetrics((current) => ({ ...current, tasks: summary.tasks }))
@@ -420,7 +423,7 @@ export function EvaluationPage() {
         <Card>
           <CardHeader>
             <CardTitle>Revise suas respostas</CardTitle>
-            <CardDescription>Confira o perfil antes de encerrar esta etapa demonstrativa. Nada será enviado.</CardDescription>
+            <CardDescription>Confira o perfil antes de iniciar as tarefas práticas da avaliação.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             {questions.map((question) => {
@@ -435,7 +438,7 @@ export function EvaluationPage() {
             <Alert className="mt-2">
               <LockKeyhole aria-hidden="true" />
               <AlertTitle>Respostas apenas nesta sessão</AlertTitle>
-              <AlertDescription>Elas permanecem somente na memória do navegador e serão descartadas ao concluir a avaliação ou desistir.</AlertDescription>
+              <AlertDescription>O perfil será usado para iniciar a avaliação acadêmica. As interações das tarefas permanecem demonstrativas e isoladas dos registros públicos.</AlertDescription>
             </Alert>
           </CardContent>
           <CardFooter className="flex flex-col-reverse gap-3 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
@@ -510,7 +513,7 @@ export function EvaluationPage() {
       )}
 
       <p className="text-center text-xs leading-relaxed text-muted-foreground">
-        Protótipo demonstrativo · Sem conexão com banco de dados · Sem coleta ou envio de respostas
+        Avaliação acadêmica · Tarefas demonstrativas isoladas · Respostas tratadas conforme o consentimento
       </p>
     </section>
   )
