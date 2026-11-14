@@ -319,7 +319,7 @@ export function EvaluationPage() {
             <div className="rounded-lg border p-4">
               <h2 className="font-medium">O que acontece nesta etapa?</h2>
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                Você responderá perguntas gerais de perfil e, em seguida, poderá localizar ocorrências, consultar detalhes e interagir, registrar um caso demonstrativo, consultar o painel administrativo e responder ao questionário. As respostas e interações ficam isoladas nesta sessão; não há coleta oficial de dados.
+                Você responderá perguntas gerais de perfil e, em seguida, poderá localizar ocorrências, consultar detalhes e interagir, registrar um caso demonstrativo e consultar o painel administrativo. Para concluir o questionário final, será necessário responder às dez afirmações de 1 a 5; as duas perguntas abertas serão opcionais. Você poderá revisar tudo e desistir a qualquer momento. Não há coleta oficial de dados.
               </p>
             </div>
             <div className="flex items-start gap-3 rounded-lg border p-4">
@@ -334,7 +334,7 @@ export function EvaluationPage() {
                   Li as informações e aceito participar voluntariamente desta etapa demonstrativa.
                 </Label>
                 <p id="consent-description" className="text-sm text-muted-foreground">
-                  O consentimento é necessário para continuar. Você pode desistir depois e descartar as respostas provisórias.
+                  O consentimento é necessário para continuar. No questionário, as dez afirmações serão obrigatórias; as perguntas abertas, opcionais. Você pode desistir depois e descartar as respostas provisórias.
                 </p>
               </div>
             </div>

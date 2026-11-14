@@ -62,7 +62,7 @@ const taskDefinitions: TaskDefinition[] = [
   {
     id: "admin-panel",
     title: "Alterar o status de uma ocorrência",
-    instruction: "Selecione no painel demonstrativo uma ocorrência Pendente e altere o status para Em análise. A tarefa será concluída somente quando a mudança aparecer nos dados isolados.",
+    instruction: "Selecione no painel demonstrativo uma ocorrência Pendente e altere o status para Resolvida. A tarefa será concluída somente quando a mudança aparecer nos dados isolados.",
     view: "admin",
   },
 ]
@@ -96,7 +96,7 @@ function isTaskCompleted(taskIndex: number, attempt: TaskAttempt) {
     case "register-test":
       return events.includes("occurrence-added")
     case "admin-panel":
-      return events.includes("admin-status-changed")
+      return events.includes("admin-status-resolved")
     default:
       return false
   }
@@ -274,7 +274,7 @@ export function GuidedCitizenTasks({ onFinish, onAbandon }: GuidedCitizenTasksPr
               <Check aria-hidden="true" className="size-5" />
             </div>
             <CardTitle>Tarefas práticas concluídas</CardTitle>
-            <CardDescription>Agora você pode responder ao questionário opcional sobre sua experiência.</CardDescription>
+              <CardDescription>Agora você pode responder ao questionário. As dez afirmações Likert serão obrigatórias; as perguntas abertas são opcionais.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <p className="text-sm text-muted-foreground">

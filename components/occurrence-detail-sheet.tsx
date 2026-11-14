@@ -260,10 +260,21 @@ export function OccurrenceDetailSheet({
 
   return (
     <>
-      <Sheet open={open} modal={!embedded} onOpenChange={onOpenChange}>
+      <Sheet
+        open={open}
+        modal={!embedded}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen && embedded && showVoteDialog) return
+          onOpenChange(nextOpen)
+        }}
+      >
         <SheetContent
+          portal={!embedded}
           hideOverlay={embedded}
-          className={`w-full p-0 flex flex-col h-full sm:max-w-lg ${embedded ? "!inset-y-auto !top-60 !bottom-24 !right-2 !h-auto !max-h-none !w-[calc(100vw-1rem)] !max-w-none sm:!w-[min(36rem,calc(100vw-2rem))] lg:!top-60 lg:!bottom-28 lg:!right-4 lg:!w-[min(38rem,50vw)]" : ""}`}
+          onInteractOutside={(event) => {
+            if (embedded) event.preventDefault()
+          }}
+          className={`overflow-hidden w-full p-0 flex flex-col h-full sm:max-w-lg ${embedded ? "!absolute !inset-y-auto !top-14 !bottom-0 !right-0 !h-auto !max-h-none !w-full !max-w-none border-l-0 lg:!left-auto lg:!right-0 lg:!w-[min(38rem,60%)]" : ""}`}
         >
           <SheetHeader className="flex-shrink-0 p-6 pb-0">
             <SheetTitle className="text-left pr-8 line-clamp-2">{occurrence.title}</SheetTitle>
@@ -741,7 +752,8 @@ export function OccurrenceDetailSheet({
               <Heart className="h-5 w-5 text-primary" />
               {isChangingVote ? "Alterar Voto de Prioridade" : "Voto Consciente"}
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-left space-y-3">
+            <AlertDialogDescription asChild className="text-left">
+              <div className="flex flex-col gap-3">
               {isChangingVote ? (
                 <p>
                   Você está prestes a alterar seu voto de <strong>{userVote && priorityLabels[userVote.priority]}</strong> para{" "}
@@ -777,6 +789,7 @@ export function OccurrenceDetailSheet({
                   </p>
                 </>
               )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

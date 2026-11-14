@@ -49,13 +49,15 @@ function SheetContent({
   children,
   side = 'right',
   hideOverlay = false,
+  portal = true,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   side?: 'top' | 'right' | 'bottom' | 'left'
   hideOverlay?: boolean
+  portal?: boolean
 }) {
-  return (
-    <SheetPortal>
+  const content = (
+    <>
       {!hideOverlay && <SheetOverlay />}
       <SheetPrimitive.Content
         data-slot="sheet-content"
@@ -79,8 +81,9 @@ function SheetContent({
           <span className="sr-only">Fechar</span>
         </SheetPrimitive.Close>
       </SheetPrimitive.Content>
-    </SheetPortal>
+    </>
   )
+  return portal ? <SheetPortal>{content}</SheetPortal> : content
 }
 
 function SheetHeader({ className, ...props }: React.ComponentProps<'div'>) {

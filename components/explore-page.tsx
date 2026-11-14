@@ -49,15 +49,19 @@ export function ExplorePage({ embedded = false, allowDetails = true, onResearchA
     onResearchActionRef.current?.(viewMode === "map" ? "map-viewed" : "list-viewed")
   }, [viewMode])
 
+  const handleDetailsOpenChange = (open: boolean) => {
+    setDetailSheetOpen(open)
+  }
+
   const handleViewDetails = (occurrence: Occurrence) => {
     if (!allowDetails) return
     setSelectedOccurrenceId(occurrence.id)
-    setDetailSheetOpen(true)
+    handleDetailsOpenChange(true)
     onResearchAction?.("occurrence-opened", occurrence.id)
   }
 
   return (
-    <div className={embedded ? "flex h-full min-h-0 flex-col" : "flex flex-col h-[calc(100dvh-3.5rem-4rem)] lg:h-[calc(100vh-4rem)]"}>
+    <div className={embedded ? "relative flex h-full min-h-0 flex-col" : "flex flex-col h-[calc(100dvh-3.5rem-4rem)] lg:h-[calc(100vh-4rem)]"}>
       {/* Header with toggle */}
       <div className="flex items-center justify-between p-3 sm:p-4 border-b border-border/50 bg-card/50 flex-shrink-0">
         <div>
@@ -103,7 +107,7 @@ export function ExplorePage({ embedded = false, allowDetails = true, onResearchA
       <OccurrenceDetailSheet
         occurrence={selectedOccurrence}
         open={detailSheetOpen}
-        onOpenChange={setDetailSheetOpen}
+        onOpenChange={handleDetailsOpenChange}
         onResearchAction={onResearchAction}
         embedded={embedded}
       />
