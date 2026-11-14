@@ -1,24 +1,21 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { createClient } from "@supabase/supabase-js"
+import { hasAdminSession } from "@/lib/admin-session"
+import type { Database } from "@/lib/supabase/database.types"
+
+function createAdminSupabase() {
+  return createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SECRET_KEY!, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+}
 
 function unauthorized(message: string, status = 403) {
   return NextResponse.json({ error: message }, { status })
 }
 
 export async function GET() {
-  const supabase = await createClient()
-  const { data: userData } = await supabase.auth.getUser()
-  const user = userData.user
-  if (!user) return unauthorized("Sessão administrativa ausente.", 401)
-  if (user.is_anonymous) return unauthorized("Sessões anônimas não podem acessar resultados.", 403)
-
-  const { data: admin, error: adminError } = await supabase
-    .from("admin_users")
-    .select("user_id")
-    .eq("user_id", user.id)
-    .maybeSingle()
-  if (adminError) return NextResponse.json({ error: "Falha ao verificar a autorização administrativa." }, { status: 500 })
-  if (!admin) return unauthorized("A conta autenticada não está autorizada como administradora.")
+  if (!(await hasAdminSession())) return unauthorized("Sessão administrativa ausente ou expirada.", 401)
+  const supabase = createAdminSupabase()
 
   const [{ data: participants, error: participantsError }, { data: tasks, error: tasksError }, { data: answers, error: answersError }] = await Promise.all([
     supabase.from("evaluation_participants").select("user_id,status,total_duration_ms,questionnaire_duration_ms"),

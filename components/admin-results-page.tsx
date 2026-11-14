@@ -1,8 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Download, Eye, EyeOff, LockKeyhole, RefreshCw } from "lucide-react"
-import { createClient } from "@/lib/supabase/client"
+import { Download, LockKeyhole, RefreshCw } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -27,9 +26,8 @@ function csvValue(value: unknown) {
 }
 
 export function AdminResultsPage() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
+  const [adminName, setAdminName] = useState("")
+  const [accessCode, setAccessCode] = useState("")
   const [results, setResults] = useState<Results | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -38,18 +36,11 @@ export function AdminResultsPage() {
   const loadResults = async (shouldSignIn = true) => {
     setLoading(true)
     setError(null)
-    const supabase = createClient()
     if (shouldSignIn) {
-      const { error: loginError } = await supabase.auth.signInWithPassword({ email, password })
-      if (loginError) {
-        const message = loginError.message.toLowerCase()
-        setError(message.includes("confirm") ? "Confirme o e-mail da conta administrativa antes de entrar." : "Credenciais administrativas inválidas.")
-        setLoading(false)
-        return
-      }
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
-      if (sessionError || !sessionData.session?.user) {
-        setError("O login foi concluído, mas a sessão não foi criada no navegador. Tente novamente.")
+      const loginResponse = await fetch("/api/admin/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: adminName, code: accessCode }), credentials: "include" })
+      if (!loginResponse.ok) {
+        const payload = await loginResponse.json().catch(() => ({}))
+        setError(payload.error ?? "Não foi possível validar o acesso.")
         setLoading(false)
         return
       }
@@ -69,11 +60,11 @@ export function AdminResultsPage() {
   }
 
   const logout = async () => {
-    await createClient().auth.signOut()
+    await fetch("/api/admin/session", { method: "DELETE", credentials: "include" })
     setResults(null)
     setAuthenticated(false)
-    setEmail("")
-    setPassword("")
+    setAdminName("")
+    setAccessCode("")
     setError("Sessão administrativa encerrada.")
   }
 
@@ -105,20 +96,12 @@ export function AdminResultsPage() {
         <Card>
           <CardHeader><CardTitle className="flex items-center gap-2"><LockKeyhole className="size-5" />Resultados da Pesquisa</CardTitle></CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <p className="text-sm text-muted-foreground">Entre com uma conta autenticada que esteja cadastrada em <code>admin_users</code>.</p>
-            <div className="flex flex-col gap-2"><Label htmlFor="admin-email">E-mail administrativo</Label><Input id="admin-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="admin-password">Senha</Label>
-              <div className="relative">
-                <Input id="admin-password" type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} className="pr-10" />
-                <button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"} className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground transition-colors hover:text-foreground">
-                  {showPassword ? <EyeOff className="size-4" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}
-                </button>
-              </div>
-            </div>
+            <p className="text-sm text-muted-foreground">Informe o nome e o código privado configurados pelo proprietário do projeto.</p>
+            <div className="flex flex-col gap-2"><Label htmlFor="admin-name">Nome de administrador</Label><Input id="admin-name" autoComplete="username" value={adminName} onChange={(event) => setAdminName(event.target.value)} /></div>
+            <div className="flex flex-col gap-2"><Label htmlFor="admin-code">Código de acesso</Label><Input id="admin-code" type="password" autoComplete="current-password" value={accessCode} onChange={(event) => setAccessCode(event.target.value)} /></div>
             {error && <Alert variant="destructive"><AlertTitle>Acesso negado</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Button className="flex-1" onClick={() => loadResults(true)} disabled={loading || !email || !password}>{loading ? "Validando..." : "Entrar e carregar resultados"}</Button>
+              <Button className="flex-1" onClick={() => loadResults(true)} disabled={loading || !adminName.trim() || !accessCode}>{loading ? "Validando..." : "Entrar nos Resultados"}</Button>
               <Button className="flex-1" variant="outline" onClick={() => loadResults(false)} disabled={loading}>Verificar sessão existente</Button>
             </div>
           </CardContent>
