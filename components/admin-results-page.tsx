@@ -47,12 +47,18 @@ export function AdminResultsPage() {
         setLoading(false)
         return
       }
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+      if (sessionError || !sessionData.session?.user) {
+        setError("O login foi concluído, mas a sessão não foi criada no navegador. Tente novamente.")
+        setLoading(false)
+        return
+      }
     }
-    const response = await fetch("/api/admin/evaluation-results", { cache: "no-store" })
+    const response = await fetch("/api/admin/evaluation-results", { cache: "no-store", credentials: "include" })
     const payload = await response.json().catch(() => ({}))
     if (!response.ok) {
       if (response.status === 403) setError(payload.error ?? "A conta autenticada não tem permissão administrativa.")
-      else if (response.status === 401) setError("A sessão administrativa expirou. Entre novamente.")
+      else if (response.status === 401) setError("O servidor não reconheceu a sessão administrativa. Verifique se os cookies estão habilitados e entre novamente.")
       else setError("Falha de comunicação com o servidor ao consultar o Supabase.")
       setAuthenticated(response.status !== 401)
     } else {
