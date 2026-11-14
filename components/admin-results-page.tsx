@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Download, LockKeyhole, RefreshCw } from "lucide-react"
+import { Download, Eye, EyeOff, LockKeyhole, RefreshCw } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -29,6 +29,7 @@ function csvValue(value: unknown) {
 export function AdminResultsPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [results, setResults] = useState<Results | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -100,7 +101,15 @@ export function AdminResultsPage() {
           <CardContent className="flex flex-col gap-4">
             <p className="text-sm text-muted-foreground">Entre com uma conta autenticada que esteja cadastrada em <code>admin_users</code>.</p>
             <div className="flex flex-col gap-2"><Label htmlFor="admin-email">E-mail administrativo</Label><Input id="admin-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></div>
-            <div className="flex flex-col gap-2"><Label htmlFor="admin-password">Senha</Label><Input id="admin-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} /></div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="admin-password">Senha</Label>
+              <div className="relative">
+                <Input id="admin-password" type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} className="pr-10" />
+                <button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"} className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground transition-colors hover:text-foreground">
+                  {showPassword ? <EyeOff className="size-4" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}
+                </button>
+              </div>
+            </div>
             {error && <Alert variant="destructive"><AlertTitle>Acesso negado</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button className="flex-1" onClick={() => loadResults(true)} disabled={loading || !email || !password}>{loading ? "Validando..." : "Entrar e carregar resultados"}</Button>
