@@ -203,11 +203,23 @@ export type Database = {
       }
     }
     Functions: {
-      cast_priority_vote: { Args: { p_occurrence_id: string; p_priority: Priority }; Returns: undefined }
+      cast_priority_vote: { Args: { p_occurrence_id: string; p_priority: Priority }; Returns: boolean }
+      support_occurrence: { Args: { p_occurrence_id: string }; Returns: boolean }
+      record_occurrence_feedback: { Args: { p_feedback_type: FeedbackType; p_occurrence_id: string }; Returns: boolean }
+      get_my_occurrence_interactions: {
+        Args: never
+        Returns: {
+          occurrence_id: string
+          has_supported: boolean
+          resolution_feedback: FeedbackType | null
+          has_contested_existence: boolean
+          priority: Priority | null
+          priority_change_count: number | null
+        }[]
+      }
       finalize_evaluation: { Args: { p_answers: Json; p_user_id: string }; Returns: undefined }
       record_evaluation_tasks: { Args: { p_practical_duration_ms: number; p_tasks: Json; p_user_id: string }; Returns: undefined }
       is_anonymous_participant: { Args: never; Returns: boolean }
-      set_occurrence_resolution_feedback: { Args: { p_feedback_type: FeedbackType; p_occurrence_id: string }; Returns: undefined }
       set_occurrence_status: { Args: { p_occurrence_id: string; p_status: Status }; Returns: undefined }
       start_evaluation: { Args: { p_demographic_data: Json; p_user_id: string }; Returns: undefined }
       withdraw_evaluation: { Args: { p_user_id: string }; Returns: undefined }

@@ -106,8 +106,13 @@ export function OccurrenceDetailSheet({
   const hasVoted = !!userVote
 
   const handleSupport = () => {
-    requestNickname(() => {
-      const supported = supportOccurrence(occurrence.id)
+    requestNickname(async () => {
+      const supported = await supportOccurrence(occurrence.id).catch(() => null)
+      if (supported === null) {
+        onResearchAction?.("interaction-error")
+        toast.error("Não foi possível registrar o apoio. Tente novamente.")
+        return
+      }
       if (!supported) {
         onResearchAction?.("interaction-error")
         toast.info("Você já apoiou esta ocorrência nesta sessão.")
@@ -150,10 +155,13 @@ export function OccurrenceDetailSheet({
   }
 
   // Confirma o voto apos reflexao
-  const confirmVote = () => {
+  const confirmVote = async () => {
     if (pendingVotePriority) {
-      const recorded = voteOnPriority(occurrence.id, pendingVotePriority)
-      if (!recorded) {
+      const recorded = await voteOnPriority(occurrence.id, pendingVotePriority).catch(() => null)
+      if (recorded === null) {
+        onResearchAction?.("interaction-error")
+        toast.error("Não foi possível registrar o voto. Tente novamente.")
+      } else if (!recorded) {
         onResearchAction?.("interaction-error")
         toast.warning("Este voto não pode ser alterado novamente nesta sessão.")
       } else if (isChangingVote) {
@@ -173,9 +181,11 @@ export function OccurrenceDetailSheet({
   }
 
   const handleConfirmResolution = () => {
-    requestNickname(() => {
-      const confirmed = confirmResolution(occurrence.id)
-      if (confirmed) {
+    requestNickname(async () => {
+      const confirmed = await confirmResolution(occurrence.id).catch(() => null)
+      if (confirmed === null) {
+        toast.error("Não foi possível registrar a confirmação. Tente novamente.")
+      } else if (confirmed) {
         toast.success("Confirmação registrada!", {
           description: "Obrigado por confirmar que o problema foi resolvido",
         })
@@ -186,9 +196,11 @@ export function OccurrenceDetailSheet({
   }
 
   const handleContestResolution = () => {
-    requestNickname(() => {
-      const contested = contestResolution(occurrence.id)
-      if (contested) {
+    requestNickname(async () => {
+      const contested = await contestResolution(occurrence.id).catch(() => null)
+      if (contested === null) {
+        toast.error("Não foi possível registrar a contestação. Tente novamente.")
+      } else if (contested) {
         toast.warning("Contestação registrada", {
           description: "Seu relato foi registrado. Obrigado pelo feedback.",
         })
@@ -199,9 +211,11 @@ export function OccurrenceDetailSheet({
   }
 
   const handleContestExistence = () => {
-    requestNickname(() => {
-      const contested = contestExistence(occurrence.id)
-      if (contested) {
+    requestNickname(async () => {
+      const contested = await contestExistence(occurrence.id).catch(() => null)
+      if (contested === null) {
+        toast.error("Não foi possível registrar a contestação. Tente novamente.")
+      } else if (contested) {
         toast.warning("Contestação registrada", {
           description: "Seu relato de que esta ocorrência não existe foi registrado.",
         })
@@ -221,7 +235,7 @@ export function OccurrenceDetailSheet({
       return
     }
 
-    requestNickname(() => {
+    requestNickname(async () => {
       const wasAlreadySubmitted =
         lastSubmittedComment.current?.occurrenceId === occurrence.id &&
         lastSubmittedComment.current.message === message
@@ -231,7 +245,7 @@ export function OccurrenceDetailSheet({
       }
 
       try {
-        addComment(occurrence.id, message)
+        await addComment(occurrence.id, message)
         onResearchAction?.("comment-added", occurrence.id)
         lastSubmittedComment.current = { occurrenceId: occurrence.id, message }
         setNewComment("")

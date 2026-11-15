@@ -247,7 +247,7 @@ export function EvaluationPage() {
 
   if (phase === "tasks") {
     return (
-      <AppProvider initialNickname="Participante">
+      <AppProvider initialNickname="Participante" demo>
         <GuidedCitizenTasks onFinish={finishTasks} onAbandon={abandonEvaluation} />
       </AppProvider>
     )

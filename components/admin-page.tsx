@@ -98,9 +98,14 @@ export function AdminPage({ onResearchStatusChange }: AdminPageProps = {}) {
     return occurrences.reduce((sum, occ) => sum + occ.supports, 0)
   }, [occurrences])
 
-  const handleStatusChange = (occurrenceId: string, newStatus: OccurrenceStatus) => {
+  const handleStatusChange = async (occurrenceId: string, newStatus: OccurrenceStatus) => {
     const previousOccurrence = occurrences.find((occurrence) => occurrence.id === occurrenceId)
-    updateOccurrenceStatus(occurrenceId, newStatus)
+    try {
+      await updateOccurrenceStatus(occurrenceId, newStatus)
+    } catch {
+      toast.error("Não foi possível atualizar o status. Tente novamente.")
+      return
+    }
     if (previousOccurrence) onResearchStatusChange?.(previousOccurrence, newStatus)
     toast.success("Status atualizado!", {
       description: `Ocorrência alterada para: ${statusLabels[newStatus]}`,
