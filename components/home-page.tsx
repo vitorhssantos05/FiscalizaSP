@@ -1,5 +1,6 @@
 "use client"
 
+import { useMemo } from "react"
 import { useApp } from "@/lib/app-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -26,7 +27,17 @@ interface HomePageProps {
 }
 
 export function HomePage({ onNavigate }: HomePageProps) {
-  const { stats } = useApp()
+  const { occurrences } = useApp()
+
+  const hasDemonstrationData = useMemo(() => occurrences.some((occ) => occ.isDemonstration), [occurrences])
+
+  // Same combined calculation as the admin panel: real Supabase records plus in-memory demonstration examples.
+  const stats = useMemo(() => ({
+    total: occurrences.length,
+    pendentes: occurrences.filter((o) => o.status === "pendente").length,
+    emAnalise: occurrences.filter((o) => o.status === "em_analise").length,
+    resolvidas: occurrences.filter((o) => o.status === "resolvida").length,
+  }), [occurrences])
 
   const features = [
     {
@@ -113,7 +124,12 @@ export function HomePage({ onNavigate }: HomePageProps) {
 
       {/* Stats Section */}
       <section className="py-8 sm:py-12 border-b border-border/50 bg-muted/30">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto flex flex-col gap-4 px-4">
+          {hasDemonstrationData && (
+            <Badge variant="outline" className="self-center border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-300">
+              Indicadores incluem dados demonstrativos
+            </Badge>
+          )}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-8">
             <Card className="text-center border-border/50">
               <CardContent className="pt-6">

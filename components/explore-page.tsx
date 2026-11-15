@@ -63,12 +63,14 @@ export function ExplorePage({ embedded = false, allowDetails = true, onResearchA
   return (
     <div className={embedded ? "relative flex h-full min-h-0 flex-col" : "flex flex-col h-[calc(100dvh-3.5rem-4rem)] lg:h-[calc(100vh-4rem)]"}>
       {/* Header with toggle */}
-      <div className="flex items-center justify-between p-3 sm:p-4 border-b border-border/50 bg-card/50 flex-shrink-0">
-        <div>
+      <div className="flex items-center justify-between gap-3 p-3 sm:p-4 border-b border-border/50 bg-card/50 flex-shrink-0">
+        <div className="min-w-0 flex-1">
           <h1 className="text-lg sm:text-xl font-bold text-foreground">Explorar Ocorrências</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            {occurrences.length} ocorrência{occurrences.length !== 1 ? "s" : ""} disponível{occurrences.length !== 1 ? "s" : ""}
-            <span className="ml-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-amber-700 dark:text-amber-300">Exemplos demonstrativos</span>
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:text-sm text-muted-foreground">
+            <span>
+              {occurrences.length} ocorrência{occurrences.length !== 1 ? "s" : ""} disponível{occurrences.length !== 1 ? "s" : ""}
+            </span>
+            <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 leading-snug text-amber-700 dark:text-amber-300 text-pretty">Inclui alguns exemplos demonstrativos</span>
           </p>
         </div>
         <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "map" | "list")}>
