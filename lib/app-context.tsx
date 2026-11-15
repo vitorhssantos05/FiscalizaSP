@@ -37,6 +37,7 @@ import {
   recordFeedbackRemote,
   supportOccurrenceRemote,
   updateOccurrenceStatusRemote,
+  deleteOccurrenceRemote,
   type NewOccurrenceInput,
 } from "@/lib/supabase/occurrences"
 
@@ -73,6 +74,8 @@ interface AppContextType {
   occurrences: Occurrence[]
   addOccurrence: (occurrence: NewOccurrenceInput) => Promise<void>
   updateOccurrenceStatus: (id: string, status: OccurrenceStatus) => Promise<void>
+  canDeleteOccurrence: (id: string) => boolean
+  deleteOccurrence: (id: string) => Promise<void>
   supportOccurrence: (id: string) => Promise<boolean>
   voteOnPriority: (id: string, priority: Priority) => Promise<boolean>
   confirmResolution: (id: string) => Promise<boolean>
@@ -294,6 +297,21 @@ export function AppProvider({
     setLocalOccurrences((prev) => prev.map((occ) => (occ.id === id ? { ...occ, status } : occ)))
   }, [isLocalOccurrence, mutateOccurrences])
 
+  // Only real Supabase records can be deleted; demonstration examples are protected.
+  const canDeleteOccurrence = useCallback(
+    (id: string) =>
+      !isLocalOccurrence(id) && realOccurrences.some((occ) => occ.id === id && !occ.isDemonstration),
+    [isLocalOccurrence, realOccurrences],
+  )
+
+  const deleteOccurrence = useCallback(async (id: string) => {
+    if (!canDeleteOccurrence(id)) {
+      throw new Error("Ocorrências demonstrativas não podem ser excluídas.")
+    }
+    await deleteOccurrenceRemote(id)
+    await mutateOccurrences()
+  }, [canDeleteOccurrence, mutateOccurrences])
+
   const supportOccurrence = useCallback(async (id: string) => {
     if (!isLocalOccurrence(id)) {
       const added = await supportOccurrenceRemote(id)
@@ -442,6 +460,8 @@ export function AppProvider({
       occurrences,
       addOccurrence,
       updateOccurrenceStatus,
+      canDeleteOccurrence,
+      deleteOccurrence,
       supportOccurrence,
       voteOnPriority,
       confirmResolution,
@@ -471,6 +491,8 @@ export function AppProvider({
       occurrences,
       addOccurrence,
       updateOccurrenceStatus,
+      canDeleteOccurrence,
+      deleteOccurrence,
       supportOccurrence,
       voteOnPriority,
       confirmResolution,
