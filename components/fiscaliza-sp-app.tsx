@@ -40,7 +40,7 @@ function AppContent() {
   }, [isDarkMode])
 
   useEffect(() => {
-    if (currentPage === "admin" && !isAdminDemoMode) {
+    if ((currentPage === "admin" || currentPage === "results") && !isAdminDemoMode) {
       setCurrentPage("home")
     }
   }, [currentPage, isAdminDemoMode])
