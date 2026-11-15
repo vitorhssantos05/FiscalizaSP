@@ -136,6 +136,11 @@ export function GuidedCitizenTasks({ onFinish, onAbandon }: GuidedCitizenTasksPr
     const seconds = (practicalElapsedSeconds % 60).toString().padStart(2, "0")
     return `${minutes}:${seconds}`
   }, [practicalElapsedSeconds])
+  const taskStartedAt = currentAttempt?.status === "in-progress" ? currentAttempt.startedAt : null
+  const taskElapsedSeconds = taskStartedAt === null
+    ? 0
+    : Math.max(0, Math.floor((currentTime - taskStartedAt) / 1000))
+  const formattedTaskTime = `${Math.floor(taskElapsedSeconds / 60).toString().padStart(2, "0")}:${(taskElapsedSeconds % 60).toString().padStart(2, "0")}`
 
   const recordTaskAction = (
     action: TaskEvent | "interaction-error",
@@ -260,8 +265,10 @@ export function GuidedCitizenTasks({ onFinish, onAbandon }: GuidedCitizenTasksPr
             Etapa {currentStage} de 5
           </Badge>
             {!allTasksFinished && (
-              <div role="timer" aria-label={`Tempo das tarefas práticas: ${formattedTime}`} className="rounded-full border px-3 py-1 text-sm text-muted-foreground">
-                Tempo: <time dateTime={`PT${practicalElapsedSeconds}S`} className="font-mono text-foreground">{formattedTime}</time>
+              <div role="timer" aria-label={`Tarefa atual: ${formattedTaskTime}. Total das tarefas práticas: ${formattedTime}`} className="flex items-center gap-3 rounded-full border px-3 py-1 text-sm text-muted-foreground">
+                <span>Tarefa: <time dateTime={`PT${taskElapsedSeconds}S`} className="font-mono text-foreground">{formattedTaskTime}</time></span>
+                <span aria-hidden="true">|</span>
+                <span>Total: <time dateTime={`PT${practicalElapsedSeconds}S`} className="font-mono text-foreground">{formattedTime}</time></span>
               </div>
             )}
         </div>

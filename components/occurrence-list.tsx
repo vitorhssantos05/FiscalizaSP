@@ -279,6 +279,11 @@ export function OccurrenceList({ onViewDetails, allowDetails = true, onOccurrenc
                         </Badge>
                         {getStatusBadge(occurrence.status)}
                         {getPriorityBadge(occurrence)}
+                        {occurrence.isDemonstration && (
+                          <Badge variant="secondary" className="text-xs">
+                            Demonstração
+                          </Badge>
+                        )}
                       </div>
                       
                       <div className="flex flex-wrap items-center gap-3 mt-3 text-sm text-muted-foreground">

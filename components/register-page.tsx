@@ -48,6 +48,7 @@ export function RegisterPage({ onSuccess, demoMode = false, onResearchError }: R
   const { addOccurrence, requestNickname } = useApp()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [imageFile, setImageFile] = useState<File | null>(null)
 
   // Form state
   const [title, setTitle] = useState("")
@@ -136,6 +137,7 @@ export function RegisterPage({ onSuccess, demoMode = false, onResearchError }: R
     input.value = ""
 
     if (!file) return
+    setImageFile(null)
 
     const acceptedTypes = ["image/jpeg", "image/png", "image/webp"]
     const maxFileSize = 3 * 1024 * 1024
@@ -160,6 +162,7 @@ export function RegisterPage({ onSuccess, demoMode = false, onResearchError }: R
     reader.onload = () => {
       if (typeof reader.result === "string") {
         setImagePreview(reader.result)
+        setImageFile(file)
       } else {
         setImagePreview(null)
         toast.error("Não foi possível carregar a imagem")
@@ -200,20 +203,27 @@ export function RegisterPage({ onSuccess, demoMode = false, onResearchError }: R
     requestNickname(() => {
       void (async () => {
         setIsSubmitting(true)
-        await new Promise((resolve) => setTimeout(resolve, 1000))
 
-        addOccurrence({
-          title: title.trim(),
-          description: description.trim(),
-          category,
-          status: "pendente",
-          initialPriority: priority,
-          neighborhood: neighborhood || "Centro",
-          address: address || "Endereço não especificado",
-          latitude: selectedLocation.lat,
-          longitude: selectedLocation.lng,
-          imageUrl: imagePreview || undefined,
-        })
+        try {
+          await addOccurrence({
+            title: title.trim(),
+            description: description.trim(),
+            category,
+            initialPriority: priority,
+            neighborhood: neighborhood || "Centro",
+            address: address || "Endereço não especificado",
+            latitude: selectedLocation.lat,
+            longitude: selectedLocation.lng,
+            imageFile,
+          })
+        } catch {
+          setIsSubmitting(false)
+          onResearchError?.()
+          toast.error("Não foi possível registrar a ocorrência", {
+            description: "Verifique sua conexão e tente novamente.",
+          })
+          return
+        }
 
         toast.success(demoMode ? "Ocorrência de teste registrada" : "Ocorrência registrada com sucesso!", {
           description: demoMode
@@ -229,6 +239,7 @@ export function RegisterPage({ onSuccess, demoMode = false, onResearchError }: R
         setNeighborhood("")
         setSelectedLocation(null)
         setImagePreview(null)
+        setImageFile(null)
         setIsSubmitting(false)
 
         onSuccess?.()

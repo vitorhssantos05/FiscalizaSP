@@ -1,41 +1,52 @@
 import { createClient } from "@/lib/supabase/client"
 import type { Json } from "@/lib/supabase/database.types"
 
-export async function getAnonymousParticipantId() {
-  const supabase = createClient()
-  const { data, error } = await supabase.auth.getSession()
-  if (error) throw error
-  const user = data.session?.user
-  if (!user || user.is_anonymous !== true) return null
-  return user.id
+export class EvaluationRequestError extends Error {
+  constructor(message: string, readonly status: number, readonly code?: string) {
+    super(message)
+  }
 }
 
-export async function startEvaluation(pDemographicData: Record<string, string>) {
-  const userId = await getAnonymousParticipantId()
-  if (!userId) return false
-  const { error } = await createClient().rpc("start_evaluation", {
-    p_user_id: userId,
-    p_demographic_data: pDemographicData,
-  })
+async function getAnonymousAccessToken() {
+  const { data, error } = await createClient().auth.getSession()
   if (error) throw error
-  return true
+  const session = data.session
+  if (!session || session.user.is_anonymous !== true) return null
+  return session.access_token
 }
 
-export async function finalizeEvaluation(pAnswers: Json[]) {
-  const userId = await getAnonymousParticipantId()
-  if (!userId) return false
-  const { error } = await createClient().rpc("finalize_evaluation", {
-    p_user_id: userId,
-    p_answers: pAnswers,
+async function sendEvaluationAction(body: Record<string, unknown>) {
+  const token = await getAnonymousAccessToken()
+  if (!token) throw new EvaluationRequestError("Sessão anônima não iniciada.", 401)
+  const response = await fetch("/api/evaluation", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify(body),
   })
-  if (error) throw error
-  return true
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => ({}))) as { error?: string; code?: string }
+    throw new EvaluationRequestError(payload.error ?? "Falha ao salvar a avaliação.", response.status, payload.code)
+  }
+}
+
+export async function startEvaluation(demographicData: Record<string, string>) {
+  await sendEvaluationAction({ action: "start", demographicData })
+}
+
+export async function recordEvaluationTasks(tasks: Json[], practicalDurationMs: number) {
+  await sendEvaluationAction({ action: "tasks", tasks, practicalDurationMs })
+}
+
+export async function finalizeEvaluation(answers: Json[]) {
+  await sendEvaluationAction({ action: "finalize", answers })
 }
 
 export async function withdrawEvaluation() {
-  const userId = await getAnonymousParticipantId()
-  if (!userId) return
-  await createClient().rpc("withdraw_evaluation", { p_user_id: userId })
+  try {
+    await sendEvaluationAction({ action: "withdraw" })
+  } catch {
+    // Withdrawal must never block the participant from leaving the study.
+  }
 }
 
 export async function startAnonymousParticipant(nickname: string) {

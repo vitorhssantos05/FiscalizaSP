@@ -62,6 +62,7 @@ export function AdminPage({ onResearchStatusChange }: AdminPageProps = {}) {
   const categoryStats = useMemo(() => {
     const counts: Record<string, number> = {}
     occurrences.forEach((occ) => {
+      if (occ.isDemonstration) return
       counts[occ.category] = (counts[occ.category] || 0) + 1
     })
     return Object.entries(counts).map(([category, count]) => ({
@@ -83,6 +84,7 @@ export function AdminPage({ onResearchStatusChange }: AdminPageProps = {}) {
   const priorityStats = useMemo(() => {
     const counts = { baixa: 0, media: 0, alta: 0 }
     occurrences.forEach((occ) => {
+      if (occ.isDemonstration) return
       const priority = calculateDynamicPriority(occ.priorityVotes)
       counts[priority]++
     })
@@ -95,12 +97,17 @@ export function AdminPage({ onResearchStatusChange }: AdminPageProps = {}) {
 
   // Total supports
   const totalSupports = useMemo(() => {
-    return occurrences.reduce((sum, occ) => sum + occ.supports, 0)
+    return occurrences.reduce((sum, occ) => (occ.isDemonstration ? sum : sum + occ.supports), 0)
   }, [occurrences])
 
-  const handleStatusChange = (occurrenceId: string, newStatus: OccurrenceStatus) => {
+  const handleStatusChange = async (occurrenceId: string, newStatus: OccurrenceStatus) => {
     const previousOccurrence = occurrences.find((occurrence) => occurrence.id === occurrenceId)
-    updateOccurrenceStatus(occurrenceId, newStatus)
+    try {
+      await updateOccurrenceStatus(occurrenceId, newStatus)
+    } catch {
+      toast.error("Não foi possível atualizar o status. Tente novamente.")
+      return
+    }
     if (previousOccurrence) onResearchStatusChange?.(previousOccurrence, newStatus)
     toast.success("Status atualizado!", {
       description: `Ocorrência alterada para: ${statusLabels[newStatus]}`,
