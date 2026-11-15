@@ -56,13 +56,22 @@ interface AdminPageProps {
 }
 
 export function AdminPage({ onResearchStatusChange }: AdminPageProps = {}) {
-  const { occurrences, updateOccurrenceStatus, stats, getDynamicPriority } = useApp()
+  const { occurrences, updateOccurrenceStatus, getDynamicPriority } = useApp()
+
+  const hasDemonstrationData = useMemo(() => occurrences.some((occ) => occ.isDemonstration), [occurrences])
+
+  // Panel indicators combine real Supabase records with the in-memory demonstration examples.
+  const stats = useMemo(() => ({
+    total: occurrences.length,
+    pendentes: occurrences.filter((o) => o.status === "pendente").length,
+    emAnalise: occurrences.filter((o) => o.status === "em_analise").length,
+    resolvidas: occurrences.filter((o) => o.status === "resolvida").length,
+  }), [occurrences])
 
   // Stats by category
   const categoryStats = useMemo(() => {
     const counts: Record<string, number> = {}
     occurrences.forEach((occ) => {
-      if (occ.isDemonstration) return
       counts[occ.category] = (counts[occ.category] || 0) + 1
     })
     return Object.entries(counts).map(([category, count]) => ({
@@ -84,7 +93,6 @@ export function AdminPage({ onResearchStatusChange }: AdminPageProps = {}) {
   const priorityStats = useMemo(() => {
     const counts = { baixa: 0, media: 0, alta: 0 }
     occurrences.forEach((occ) => {
-      if (occ.isDemonstration) return
       const priority = calculateDynamicPriority(occ.priorityVotes)
       counts[priority]++
     })
@@ -97,7 +105,7 @@ export function AdminPage({ onResearchStatusChange }: AdminPageProps = {}) {
 
   // Total supports
   const totalSupports = useMemo(() => {
-    return occurrences.reduce((sum, occ) => (occ.isDemonstration ? sum : sum + occ.supports), 0)
+    return occurrences.reduce((sum, occ) => sum + occ.supports, 0)
   }, [occurrences])
 
   const handleStatusChange = async (occurrenceId: string, newStatus: OccurrenceStatus) => {
@@ -121,6 +129,11 @@ export function AdminPage({ onResearchStatusChange }: AdminPageProps = {}) {
         <p className="text-muted-foreground mt-2">
           Painel demonstrativo com dados locais. As alterações valem somente nesta sessão e não concedem privilégios administrativos reais.
         </p>
+        {hasDemonstrationData && (
+          <Badge variant="outline" className="mt-3 border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-300">
+            Indicadores incluem dados demonstrativos
+          </Badge>
+        )}
       </div>
 
       {/* Stats Cards */}
