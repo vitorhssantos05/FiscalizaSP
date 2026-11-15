@@ -152,11 +152,15 @@ export function Navigation({
                 <p id="admin-demo-description" className="px-2 pt-2 text-xs text-muted-foreground">
                   Gerencie e analise as ocorrências registradas na plataforma
                 </p>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={() => onPageChange("results")} onClick={() => onPageChange("results")}>
-                  <ClipboardCheck className="size-4" />
-                  Resultados da Pesquisa
-                </DropdownMenuItem>
+                {isAdminDemoMode && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={() => onPageChange("results")}>
+                      <ClipboardCheck className="size-4" />
+                      Resultados da Pesquisa
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
