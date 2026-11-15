@@ -114,6 +114,7 @@ type EvaluationParticipant = {
   withdrawn_at: string | null
   total_duration_ms: number | null
   questionnaire_duration_ms: number | null
+  practical_duration_ms: number | null
   created_at: string
   updated_at: string
 }
@@ -121,7 +122,6 @@ type EvaluationTask = {
   id: string
   participant_id: string
   task_key: string
-  attempt_number: number
   status: EvaluationTaskStatus
   started_at: string | null
   completed_at: string | null
@@ -205,13 +205,11 @@ export type Database = {
     Functions: {
       cast_priority_vote: { Args: { p_occurrence_id: string; p_priority: Priority }; Returns: undefined }
       finalize_evaluation: { Args: { p_answers: Json; p_user_id: string }; Returns: undefined }
-      finish_evaluation_task: { Args: { p_result: Json; p_status: string; p_task_id: string; p_user_id: string }; Returns: undefined }
+      record_evaluation_tasks: { Args: { p_practical_duration_ms: number; p_tasks: Json; p_user_id: string }; Returns: undefined }
       is_anonymous_participant: { Args: never; Returns: boolean }
       set_occurrence_resolution_feedback: { Args: { p_feedback_type: FeedbackType; p_occurrence_id: string }; Returns: undefined }
       set_occurrence_status: { Args: { p_occurrence_id: string; p_status: Status }; Returns: undefined }
       start_evaluation: { Args: { p_demographic_data: Json; p_user_id: string }; Returns: undefined }
-      start_evaluation_questionnaire: { Args: { p_user_id: string }; Returns: undefined }
-      start_evaluation_task: { Args: { p_task_key: string; p_user_id: string }; Returns: string }
       withdraw_evaluation: { Args: { p_user_id: string }; Returns: undefined }
     }
     Enums: {

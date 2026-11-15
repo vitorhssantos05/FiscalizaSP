@@ -1,57 +1,92 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
-import type { Database } from "@/lib/supabase/database.types"
+import { hasAdminSession } from "@/lib/admin-session"
+import { createAdminSupabase } from "@/lib/supabase/admin"
+import { evaluationTaskCatalog, likertStatements, openQuestions, profileQuestions } from "@/lib/evaluation-catalog"
 
-function createAdminSupabase() {
-  return createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SECRET_KEY!, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
-}
+export const dynamic = "force-dynamic"
+
+const average = (values: number[]) => (values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null)
 
 export async function GET() {
-  const supabase = createAdminSupabase()
+  if (!(await hasAdminSession())) {
+    return NextResponse.json({ error: "Acesso administrativo necessário." }, { status: 401 })
+  }
 
-  const [{ data: participants, error: participantsError }, { data: tasks, error: tasksError }, { data: answers, error: answersError }] = await Promise.all([
-    supabase.from("evaluation_participants").select("user_id,status,total_duration_ms,questionnaire_duration_ms"),
-    supabase.from("evaluation_tasks").select("participant_id,task_key,status,duration_ms"),
+  const supabase = createAdminSupabase()
+  const [participantsResult, tasksResult, answersResult] = await Promise.all([
+    supabase.from("evaluation_participants").select("user_id,status,demographic_data,total_duration_ms,questionnaire_duration_ms,practical_duration_ms"),
+    supabase.from("evaluation_tasks").select("participant_id,task_key,status,duration_ms,result"),
     supabase.from("evaluation_answers").select("participant_id,question_key,answer"),
   ])
 
-  if (participantsError || tasksError || answersError) {
+  if (participantsResult.error || tasksResult.error || answersResult.error) {
+    console.error("[admin-results] query failed", participantsResult.error ?? tasksResult.error ?? answersResult.error)
     return NextResponse.json({ error: "Não foi possível consultar os resultados." }, { status: 500 })
   }
 
+  const participants = participantsResult.data
   const completedParticipants = participants.filter((participant) => participant.status === "completed")
-  const taskKeys = [...new Set(tasks.map((task) => task.task_key))].sort()
-  const taskSummary = taskKeys.map((taskKey) => {
-    const taskRows = tasks.filter((task) => task.task_key === taskKey)
-    const completed = taskRows.filter((task) => task.status === "completed")
+  const completedIds = new Set(completedParticipants.map((participant) => participant.user_id))
+  const tasks = tasksResult.data.filter((task) => completedIds.has(task.participant_id))
+  const answers = answersResult.data.filter((answer) => completedIds.has(answer.participant_id))
+
+  const taskSummary = evaluationTaskCatalog.map(({ id, title }) => {
+    const rows = tasks.filter((task) => task.task_key === id)
+    const completed = rows.filter((task) => task.status === "completed")
     return {
-      taskKey,
+      taskKey: id,
+      title,
       completed: completed.length,
-      completionRate: participants.length ? completed.length / participants.length : null,
-      averageDurationMs: completed.length ? completed.reduce((sum, task) => sum + (task.duration_ms ?? 0), 0) / completed.length : null,
+      skipped: rows.filter((task) => task.status === "skipped").length,
+      completionRate: completedParticipants.length ? completed.length / completedParticipants.length : null,
+      averageDurationMs: average(completed.map((task) => task.duration_ms ?? 0)),
     }
   })
 
-  const likertKeys = [...new Set(answers.filter((answer) => answer.question_key !== "difficulties" && answer.question_key !== "improvements").map((answer) => answer.question_key))].sort()
-  const likert = likertKeys.map((questionKey) => {
+  const likert = likertStatements.map(({ id, text, negative }) => {
     const values = answers
-      .filter((answer) => answer.question_key === questionKey && typeof answer.answer === "number")
-      .map((answer) => answer.answer as number)
-    return { questionKey, average: values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null, distribution: [1, 2, 3, 4, 5].map((value) => values.filter((answer) => answer === value).length) }
+      .filter((answer) => answer.question_key === id && typeof answer.answer === "number")
+      .map((answer) => (negative ? 6 - (answer.answer as number) : (answer.answer as number)))
+    return {
+      questionKey: id,
+      text,
+      responses: values.length,
+      average: average(values),
+      distribution: [1, 2, 3, 4, 5].map((value) => values.filter((answer) => answer === value).length),
+    }
   })
+
+  const profile = profileQuestions.map(({ key, shortTitle, options }) => ({
+    key,
+    title: shortTitle,
+    distribution: options.map((option) => ({
+      label: option.label,
+      count: completedParticipants.filter((participant) => {
+        const data = participant.demographic_data as Record<string, unknown> | null
+        return data?.[key] === option.value
+      }).length,
+    })),
+  }))
+
+  const openQuestionTitles = Object.fromEntries(openQuestions.map((question) => [question.id, question.text]))
 
   return NextResponse.json({
     totals: {
       participants: participants.length,
       completed: completedParticipants.length,
+      inProgress: participants.filter((participant) => participant.status === "in_progress").length,
       abandoned: participants.filter((participant) => participant.status === "withdrawn").length,
       completionRate: participants.length ? completedParticipants.length / participants.length : null,
-      averageQuestionnaireDurationMs: completedParticipants.length ? completedParticipants.reduce((sum, participant) => sum + (participant.questionnaire_duration_ms ?? 0), 0) / completedParticipants.length : null,
+      averageTotalDurationMs: average(completedParticipants.map((participant) => participant.total_duration_ms ?? 0)),
+      averagePracticalDurationMs: average(completedParticipants.filter((participant) => participant.practical_duration_ms !== null).map((participant) => participant.practical_duration_ms ?? 0)),
+      averageQuestionnaireDurationMs: average(completedParticipants.map((participant) => participant.questionnaire_duration_ms ?? 0)),
+      overallLikertAverage: average(likert.flatMap((item) => (item.average === null ? [] : [item.average]))),
     },
     taskSummary,
     likert,
-    openAnswers: answers.filter((answer) => answer.question_key === "difficulties" || answer.question_key === "improvements"),
+    profile,
+    openAnswers: answers
+      .filter((answer) => answer.question_key in openQuestionTitles && typeof answer.answer === "string" && answer.answer.trim())
+      .map((answer) => ({ ...answer, question_title: openQuestionTitles[answer.question_key] })),
   })
 }

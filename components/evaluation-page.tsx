@@ -14,74 +14,19 @@ import { AppProvider } from "@/lib/app-context"
 import { GuidedCitizenTasks, type GuidedTaskSummary } from "@/components/guided-citizen-tasks"
 import { EvaluationQuestionnaire } from "@/components/evaluation-questionnaire"
 import { createInitialEvaluationMetrics, finalizeEvaluationMetrics, type EvaluationMetrics, type QuestionnaireMetrics } from "@/lib/evaluation-metrics"
-import { finalizeEvaluation, startAnonymousParticipant, startEvaluation, withdrawEvaluation } from "@/lib/supabase/anonymous-participant"
+import { EvaluationRequestError, finalizeEvaluation, recordEvaluationTasks, startAnonymousParticipant, startEvaluation, withdrawEvaluation } from "@/lib/supabase/anonymous-participant"
+import { profileQuestions as questions, type ProfileAnswerKey as AnswerKey } from "@/lib/evaluation-catalog"
 
 type ResearchPhase = "introduction" | "profile" | "review" | "transition" | "tasks" | "questionnaire" | "declined"
-type AnswerKey = "ageRange" | "socialMediaUse" | "digitalFamiliarity" | "platformExperience"
 type Answers = Record<AnswerKey, string>
-
-type Question = {
-  key: AnswerKey
-  title: string
-  description: string
-  options: { value: string; label: string }[]
-}
 
 const emptyAnswers: Answers = {
   ageRange: "",
   socialMediaUse: "",
   digitalFamiliarity: "",
   platformExperience: "",
+  deviceType: "",
 }
-
-const questions: Question[] = [
-  {
-    key: "ageRange",
-    title: "Qual é a sua faixa etária?",
-    description: "Não solicitamos sua data de nascimento.",
-    options: [
-      { value: "18-24", label: "18 a 24 anos" },
-      { value: "25-34", label: "25 a 34 anos" },
-      { value: "35-44", label: "35 a 44 anos" },
-      { value: "45-54", label: "45 a 54 anos" },
-      { value: "55+", label: "55 anos ou mais" },
-      { value: "prefer-not-to-say", label: "Prefiro não informar" },
-    ],
-  },
-  {
-    key: "socialMediaUse",
-    title: "Com que frequência você utiliza redes sociais?",
-    description: "Considere o uso de redes sociais no seu dia a dia.",
-    options: [
-      { value: "daily", label: "Diariamente" },
-      { value: "several-times-weekly", label: "Algumas vezes por semana" },
-      { value: "once-weekly", label: "Uma vez por semana" },
-      { value: "rarely", label: "Raramente" },
-      { value: "never", label: "Nunca" },
-      { value: "prefer-not-to-say", label: "Prefiro não responder" },
-    ],
-  },
-  {
-    key: "digitalFamiliarity",
-    title: "Como você avalia sua familiaridade com ferramentas digitais?",
-    description: "Pense em aplicativos, sites e serviços online.",
-    options: [
-      { value: "beginner", label: "Pouco familiarizado(a)" },
-      { value: "intermediate", label: "Razoavelmente familiarizado(a)" },
-      { value: "advanced", label: "Muito familiarizado(a)" },
-    ],
-  },
-  {
-    key: "platformExperience",
-    title: "Você já usou plataformas digitais para fiscalizar ou reportar problemas urbanos?",
-    description: "Por exemplo, canais digitais para comunicar problemas de infraestrutura à cidade.",
-    options: [
-      { value: "yes", label: "Sim" },
-      { value: "no", label: "Não" },
-      { value: "unsure", label: "Não tenho certeza" },
-    ],
-  },
-]
 
 const stepLabels = ["Consentimento", "Perfil", "Revisão"]
 
@@ -93,7 +38,9 @@ export function EvaluationPage() {
   const [missingAnswers, setMissingAnswers] = useState<AnswerKey[]>([])
   const [sessionMetrics, setSessionMetrics] = useState<EvaluationMetrics>(() => createInitialEvaluationMetrics())
   const [persistenceError, setPersistenceError] = useState<string | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
   const completionSubmittedRef = useRef(false)
+  const practicalStartedAtRef = useRef<number | null>(null)
 
   useEffect(() => {
     let completed = false
@@ -136,22 +83,50 @@ export function EvaluationPage() {
   }
 
   const finishE1 = async () => {
+    if (isSaving) return
     setPersistenceError(null)
+    setIsSaving(true)
     try {
       await startAnonymousParticipant("Participante")
-      const started = await startEvaluation(answers)
-      if (!started) throw new Error("Sessão anônima não iniciada")
+      await startEvaluation(answers)
       setSessionMetrics(createInitialEvaluationMetrics())
+      practicalStartedAtRef.current = Date.now()
       setPhase("tasks")
       window.scrollTo(0, 0)
-    } catch {
-      setPersistenceError("Não foi possível iniciar o registro seguro desta avaliação. Tente novamente.")
+    } catch (error) {
+      if (error instanceof EvaluationRequestError && error.status === 409) {
+        setSessionStatus("completed")
+      } else {
+        setPersistenceError("Não foi possível iniciar o registro seguro desta avaliação. Tente novamente.")
+      }
+    } finally {
+      setIsSaving(false)
     }
   }
 
-  const finishTasks = (summary: GuidedTaskSummary) => {
-    setSessionMetrics((current) => ({ ...current, tasks: summary.tasks }))
-    setPhase("questionnaire")
+  const finishTasks = async (summary: GuidedTaskSummary) => {
+    if (isSaving) return
+    setPersistenceError(null)
+    setIsSaving(true)
+    const practicalStartedAt = practicalStartedAtRef.current ?? Math.min(...summary.tasks.map((task) => task.startedAt))
+    try {
+      await recordEvaluationTasks(
+        summary.tasks.map((task) => ({
+          taskId: task.taskId,
+          status: task.status,
+          startedAt: task.startedAt,
+          endedAt: task.endedAt,
+          failedAttempts: task.failedAttempts,
+        })),
+        Math.max(0, Date.now() - practicalStartedAt),
+      )
+      setSessionMetrics((current) => ({ ...current, tasks: summary.tasks }))
+      setPhase("questionnaire")
+    } catch {
+      setPersistenceError("Não foi possível salvar os resultados das tarefas práticas. Tente novamente.")
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const finishQuestionnaire = async (questionnaire: QuestionnaireMetrics) => {
@@ -163,7 +138,8 @@ export function EvaluationPage() {
       Date.now(),
       questionnaire,
     )
-    if (!completedMetrics.questionnaireCompleted) return
+    if (!completedMetrics.questionnaireCompleted || isSaving) return
+    setIsSaving(true)
     try {
       await finalizeEvaluation([
         ...questionnaire.likert.map((answer) => ({ question_key: answer.questionId, answer: answer.value })),
@@ -173,6 +149,8 @@ export function EvaluationPage() {
     } catch {
       setPersistenceError("Não foi possível salvar suas respostas com segurança. Tente novamente.")
       return
+    } finally {
+      setIsSaving(false)
     }
     completionSubmittedRef.current = true
 
@@ -472,8 +450,8 @@ export function EvaluationPage() {
             })}
             <Alert className="mt-2">
               <LockKeyhole aria-hidden="true" />
-              <AlertTitle>Respostas apenas nesta sessão</AlertTitle>
-              <AlertDescription>O perfil será usado para iniciar a avaliação acadêmica. As interações das tarefas permanecem demonstrativas e isoladas dos registros públicos.</AlertDescription>
+              <AlertTitle>Registro anônimo</AlertTitle>
+              <AlertDescription>O perfil, os tempos e o resultado das tarefas e as respostas do questionário serão salvos de forma anônima para análise acadêmica. As interações das tarefas usam dados isolados dos registros públicos.</AlertDescription>
             </Alert>
           </CardContent>
           <CardFooter className="flex flex-col-reverse gap-3 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
@@ -485,8 +463,8 @@ export function EvaluationPage() {
               <Button type="button" variant="ghost" onClick={declineParticipation}>
                 Desistir e descartar
               </Button>
-              <Button type="button" onClick={finishE1}>
-                Concluir preparação
+              <Button type="button" onClick={finishE1} disabled={isSaving}>
+                {isSaving ? "Salvando..." : "Concluir preparação"}
                 <Check data-icon="inline-end" />
               </Button>
             </div>
@@ -507,7 +485,7 @@ export function EvaluationPage() {
             <Alert>
               <AlertTriangle aria-hidden="true" />
               <AlertTitle>Ambiente demonstrativo e isolado</AlertTitle>
-              <AlertDescription>As respostas de perfil permanecem somente na memória desta sessão. As tarefas práticas usam dados isolados e nenhuma interação será enviada ou misturada à navegação pública.</AlertDescription>
+              <AlertDescription>As tarefas práticas usam dados isolados e nenhuma interação será misturada à navegação pública. Apenas os tempos e o resultado de cada tarefa são registrados de forma anônima.</AlertDescription>
             </Alert>
             <p className="text-sm leading-relaxed text-muted-foreground">
               Esta avaliação é demonstrativa; não inicia uma coleta oficial de dados nem deve ser usada como instrumento de pesquisa com participantes reais.

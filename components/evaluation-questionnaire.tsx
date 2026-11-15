@@ -215,7 +215,7 @@ export function EvaluationQuestionnaire({ onFinish, onAbandon }: EvaluationQuest
           <Alert>
             <LockKeyhole aria-hidden="true" />
             <AlertTitle>Somente nesta demonstração</AlertTitle>
-            <AlertDescription>As respostas permanecem apenas na memória desta tela. Não são enviadas, armazenadas ou usadas para coleta oficial.</AlertDescription>
+            <AlertDescription>As respostas serão salvas de forma anônima ao finalizar o questionário e usadas apenas para análise acadêmica.</AlertDescription>
           </Alert>
 
           <div className="flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
