@@ -252,7 +252,10 @@ export function MapComponent({
                     <h3 className="popup-title">{occurrence.title}</h3>
                     
                     {/* Categoria */}
-                    <span className="popup-category">{categoryLabels[occurrence.category]}</span>
+                    <span className="popup-category">
+                      {categoryLabels[occurrence.category]}
+                      {occurrence.isDemonstration && " · Demonstração"}
+                    </span>
                     
                     {/* Local */}
                     <div className="popup-location">

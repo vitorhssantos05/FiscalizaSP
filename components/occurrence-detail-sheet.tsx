@@ -292,6 +292,11 @@ export function OccurrenceDetailSheet({
         >
           <SheetHeader className="flex-shrink-0 p-6 pb-0">
             <SheetTitle className="text-left pr-8 line-clamp-2">{occurrence.title}</SheetTitle>
+            {occurrence.isDemonstration && (
+              <Badge variant="secondary" className="w-fit text-xs">
+                Demonstração: exemplo fictício, interações não são salvas
+              </Badge>
+            )}
           </SheetHeader>
 
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-6 pt-4">

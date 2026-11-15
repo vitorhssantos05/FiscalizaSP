@@ -19,6 +19,12 @@ import type {
   UserVoteRecord,
 } from "@/lib/types"
 import { initialOccurrences } from "@/lib/mock-data"
+
+const demonstrationOccurrences: Occurrence[] = initialOccurrences.map((occurrence) => ({
+  ...occurrence,
+  isDemonstration: true,
+}))
+const demonstrationOccurrenceIds = new Set(demonstrationOccurrences.map((occurrence) => occurrence.id))
 import { calculateDynamicPriority } from "@/lib/types"
 import { startAnonymousParticipant } from "@/lib/supabase/anonymous-participant"
 import {
@@ -187,15 +193,37 @@ export function AppProvider({
   }, [])
 
   // In-memory state used only in demo mode.
-  const [localOccurrences, setLocalOccurrences] = useState<Occurrence[]>(initialOccurrences)
+  // In persistent mode it holds only the "Demonstração" examples, which are never sent to Supabase.
+  const [localOccurrences, setLocalOccurrences] = useState<Occurrence[]>(() =>
+    persistent ? demonstrationOccurrences : initialOccurrences,
+  )
   const [localVotes, setLocalVotes] = useState<UserVoteRecord[]>([])
   const localVotesRef = useRef<UserVoteRecord[]>([])
   const [localInteractions, setLocalInteractions] = useState<Record<string, UserInteractionRecord>>({})
   const localInteractionsRef = useRef<Record<string, UserInteractionRecord>>({})
 
-  const occurrences = persistent ? (remoteOccurrences ?? []) : localOccurrences
-  const userVotes = persistent ? (remoteInteractions?.votes ?? []) : localVotes
-  const userInteractions = persistent ? (remoteInteractions?.interactions ?? {}) : localInteractions
+  const realOccurrences = useMemo(
+    () => (persistent ? (remoteOccurrences ?? []) : localOccurrences),
+    [persistent, remoteOccurrences, localOccurrences],
+  )
+  const occurrences = useMemo(() => {
+    if (!persistent) return localOccurrences
+    const realIds = new Set(realOccurrences.map((occurrence) => occurrence.id))
+    return [...realOccurrences, ...localOccurrences.filter((occurrence) => !realIds.has(occurrence.id))]
+  }, [persistent, realOccurrences, localOccurrences])
+  const userVotes = useMemo(
+    () => (persistent ? [...(remoteInteractions?.votes ?? []), ...localVotes] : localVotes),
+    [persistent, remoteInteractions, localVotes],
+  )
+  const userInteractions = useMemo(
+    () => (persistent ? { ...localInteractions, ...(remoteInteractions?.interactions ?? {}) } : localInteractions),
+    [persistent, remoteInteractions, localInteractions],
+  )
+
+  const isLocalOccurrence = useCallback(
+    (id: string) => !persistent || demonstrationOccurrenceIds.has(id),
+    [persistent],
+  )
 
   const refreshRemote = useCallback(async () => {
     await Promise.all([mutateOccurrences(), mutateInteractions()])
@@ -258,16 +286,16 @@ export function AppProvider({
   }, [persistent, refreshRemote])
 
   const updateOccurrenceStatus = useCallback(async (id: string, status: OccurrenceStatus) => {
-    if (persistent) {
+    if (!isLocalOccurrence(id)) {
       await updateOccurrenceStatusRemote(id, status)
       await mutateOccurrences()
       return
     }
     setLocalOccurrences((prev) => prev.map((occ) => (occ.id === id ? { ...occ, status } : occ)))
-  }, [persistent, mutateOccurrences])
+  }, [isLocalOccurrence, mutateOccurrences])
 
   const supportOccurrence = useCallback(async (id: string) => {
-    if (persistent) {
+    if (!isLocalOccurrence(id)) {
       const added = await supportOccurrenceRemote(id)
       await refreshRemote()
       return added
@@ -277,7 +305,7 @@ export function AppProvider({
     )
     if (added) incrementLocal(id, "supports")
     return added
-  }, [persistent, refreshRemote, updateLocalInteraction, incrementLocal])
+  }, [isLocalOccurrence, refreshRemote, updateLocalInteraction, incrementLocal])
 
   const getUserVote = useCallback(
     (occurrenceId: string): UserVoteRecord | undefined =>
@@ -294,7 +322,7 @@ export function AppProvider({
   )
 
   const voteOnPriority = useCallback(async (id: string, priority: Priority) => {
-    if (persistent) {
+    if (!isLocalOccurrence(id)) {
       const recorded = await castPriorityVoteRemote(id, priority)
       await refreshRemote()
       return recorded
@@ -323,10 +351,10 @@ export function AppProvider({
       }),
     )
     return true
-  }, [persistent, refreshRemote])
+  }, [isLocalOccurrence, refreshRemote])
 
   const confirmResolution = useCallback(async (id: string) => {
-    if (persistent) {
+    if (!isLocalOccurrence(id)) {
       const recorded = await recordFeedbackRemote(id, "confirmacao_resolucao")
       await refreshRemote()
       return recorded
@@ -336,10 +364,10 @@ export function AppProvider({
     )
     if (recorded) incrementLocal(id, "confirmations")
     return recorded
-  }, [persistent, refreshRemote, updateLocalInteraction, incrementLocal])
+  }, [isLocalOccurrence, refreshRemote, updateLocalInteraction, incrementLocal])
 
   const contestResolution = useCallback(async (id: string) => {
-    if (persistent) {
+    if (!isLocalOccurrence(id)) {
       const recorded = await recordFeedbackRemote(id, "contestacao_resolucao")
       await refreshRemote()
       return recorded
@@ -349,10 +377,10 @@ export function AppProvider({
     )
     if (recorded) incrementLocal(id, "contestations")
     return recorded
-  }, [persistent, refreshRemote, updateLocalInteraction, incrementLocal])
+  }, [isLocalOccurrence, refreshRemote, updateLocalInteraction, incrementLocal])
 
   const contestExistence = useCallback(async (id: string) => {
-    if (persistent) {
+    if (!isLocalOccurrence(id)) {
       const recorded = await recordFeedbackRemote(id, "contestacao_existencia")
       await refreshRemote()
       return recorded
@@ -364,11 +392,11 @@ export function AppProvider({
     )
     if (recorded) incrementLocal(id, "existenceContestations")
     return recorded
-  }, [persistent, refreshRemote, updateLocalInteraction, incrementLocal])
+  }, [isLocalOccurrence, refreshRemote, updateLocalInteraction, incrementLocal])
 
   const addComment = useCallback(async (occurrenceId: string, message: string) => {
     const author = nicknameRef.current
-    if (persistent) {
+    if (!isLocalOccurrence(occurrenceId)) {
       if (!author) throw new Error("Apelido ausente.")
       await createComment(occurrenceId, author, message)
       await mutateOccurrences()
@@ -384,14 +412,14 @@ export function AppProvider({
     setLocalOccurrences((prev) =>
       prev.map((occ) => (occ.id === occurrenceId ? { ...occ, comments: [...occ.comments, newComment] } : occ)),
     )
-  }, [persistent, mutateOccurrences])
+  }, [isLocalOccurrence, mutateOccurrences])
 
   const stats = useMemo(() => ({
-    total: occurrences.length,
-    pendentes: occurrences.filter((o) => o.status === "pendente").length,
-    emAnalise: occurrences.filter((o) => o.status === "em_analise").length,
-    resolvidas: occurrences.filter((o) => o.status === "resolvida").length,
-  }), [occurrences])
+    total: realOccurrences.length,
+    pendentes: realOccurrences.filter((o) => o.status === "pendente").length,
+    emAnalise: realOccurrences.filter((o) => o.status === "em_analise").length,
+    resolvidas: realOccurrences.filter((o) => o.status === "resolvida").length,
+  }), [realOccurrences])
 
   const getDynamicPriority = useCallback(
     (occurrence: Occurrence) => calculateDynamicPriority(occurrence.priorityVotes),

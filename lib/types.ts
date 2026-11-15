@@ -49,6 +49,7 @@ export interface Occurrence {
   longitude: number
   comments: Comment[]
   imageUrl?: string
+  isDemonstration?: boolean
 }
 
 export interface User {
