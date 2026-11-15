@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server"
-import { hasAdminSession } from "@/lib/admin-session"
 import { createAdminSupabase } from "@/lib/supabase/admin"
 import { evaluationTaskCatalog, likertStatements, openQuestions, profileQuestions } from "@/lib/evaluation-catalog"
 
@@ -8,10 +7,6 @@ export const dynamic = "force-dynamic"
 const average = (values: number[]) => (values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null)
 
 export async function GET() {
-  if (!(await hasAdminSession())) {
-    return NextResponse.json({ error: "Acesso administrativo necessário." }, { status: 401 })
-  }
-
   const supabase = createAdminSupabase()
   const [participantsResult, tasksResult, answersResult] = await Promise.all([
     supabase.from("evaluation_participants").select("user_id,status,demographic_data,total_duration_ms,questionnaire_duration_ms,practical_duration_ms"),
@@ -69,6 +64,9 @@ export async function GET() {
   }))
 
   const openQuestionTitles = Object.fromEntries(openQuestions.map((question) => [question.id, question.text]))
+  const anonymousLabels = new Map(
+    completedParticipants.map((participant, index) => [participant.user_id, `P${String(index + 1).padStart(3, "0")}`]),
+  )
 
   return NextResponse.json({
     totals: {
@@ -87,6 +85,11 @@ export async function GET() {
     profile,
     openAnswers: answers
       .filter((answer) => answer.question_key in openQuestionTitles && typeof answer.answer === "string" && answer.answer.trim())
-      .map((answer) => ({ ...answer, question_title: openQuestionTitles[answer.question_key] })),
+      .map((answer) => ({
+        participant_id: anonymousLabels.get(answer.participant_id) ?? "anônimo",
+        question_key: answer.question_key,
+        question_title: openQuestionTitles[answer.question_key],
+        answer: answer.answer,
+      })),
   })
 }
