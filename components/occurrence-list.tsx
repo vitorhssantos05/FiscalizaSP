@@ -307,7 +307,7 @@ export function OccurrenceList({ onViewDetails, allowDetails = true, onOccurrenc
                         </span>
                         <span className="flex items-center gap-1 text-sm text-muted-foreground">
                           <Users className="h-4 w-4" />
-                          {occurrence.confirmations} confirmação{occurrence.confirmations !== 1 ? "ões" : ""}
+                          {occurrence.confirmations} {occurrence.confirmations === 1 ? "confirmação" : "confirmações"}
                         </span>
                       </div>
                     </div>
