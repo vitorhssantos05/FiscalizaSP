@@ -241,3 +241,20 @@ export async function updateOccurrenceStatusRemote(occurrenceId: string, status:
     throw new Error(payload.error ?? "Não foi possível atualizar o status.")
   }
 }
+
+export async function deleteOccurrenceRemote(occurrenceId: string) {
+  const { data } = await createClient().auth.getSession()
+  const token = data.session?.access_token
+  const response = await fetch("/api/occurrences/delete", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ occurrenceId }),
+  })
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => ({}))) as { error?: string }
+    throw new Error(payload.error ?? "Não foi possível excluir a ocorrência.")
+  }
+}

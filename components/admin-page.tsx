@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { useApp } from "@/lib/app-context"
 import type { Occurrence, OccurrenceStatus } from "@/lib/types"
 import { categoryLabels, statusLabels, calculateDynamicPriority, priorityLabels } from "@/lib/types"
@@ -9,6 +9,17 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Button } from "@/components/ui/button"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import {
   BarChart,
@@ -32,6 +43,8 @@ import {
   TrendingUp,
   Users,
   BarChart3,
+  Trash2,
+  Lock,
 } from "lucide-react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -56,7 +69,23 @@ interface AdminPageProps {
 }
 
 export function AdminPage({ onResearchStatusChange }: AdminPageProps = {}) {
-  const { occurrences, updateOccurrenceStatus, getDynamicPriority } = useApp()
+  const { occurrences, updateOccurrenceStatus, getDynamicPriority, canDeleteOccurrence, deleteOccurrence } = useApp()
+  const [occurrenceToDelete, setOccurrenceToDelete] = useState<Occurrence | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const handleConfirmDelete = async () => {
+    if (!occurrenceToDelete) return
+    setIsDeleting(true)
+    try {
+      await deleteOccurrence(occurrenceToDelete.id)
+      toast.success("Ocorrência excluída", { description: occurrenceToDelete.title })
+      setOccurrenceToDelete(null)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível excluir a ocorrência.")
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   const hasDemonstrationData = useMemo(() => occurrences.some((occ) => occ.isDemonstration), [occurrences])
 
@@ -389,6 +418,7 @@ export function AdminPage({ onResearchStatusChange }: AdminPageProps = {}) {
                   <TableHead>Prioridade</TableHead>
                   <TableHead>Data</TableHead>
                   <TableHead className="text-right">Apoios</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -461,6 +491,27 @@ export function AdminPage({ onResearchStatusChange }: AdminPageProps = {}) {
                           {occ.supports}
                         </div>
                       </TableCell>
+                      <TableCell className="text-right">
+                        {canDeleteOccurrence(occ.id) ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => setOccurrenceToDelete(occ)}
+                            aria-label={`Excluir ocorrência ${occ.title}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <span
+                            className="inline-flex items-center gap-1 whitespace-nowrap text-xs text-muted-foreground"
+                            title="Ocorrências demonstrativas não podem ser excluídas"
+                          >
+                            <Lock className="h-3 w-3" aria-hidden="true" />
+                            Demonstração
+                          </span>
+                        )}
+                      </TableCell>
                     </TableRow>
                   )
                 })}
@@ -471,6 +522,35 @@ export function AdminPage({ onResearchStatusChange }: AdminPageProps = {}) {
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog
+        open={occurrenceToDelete !== null}
+        onOpenChange={(open) => {
+          if (!open && !isDeleting) setOccurrenceToDelete(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir ocorrência?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {`"${occurrenceToDelete?.title ?? ""}" será removida permanentemente, junto com seus apoios, votos e comentários. Esta ação não pode ser desfeita.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
+              onClick={(event) => {
+                event.preventDefault()
+                void handleConfirmDelete()
+              }}
+            >
+              {isDeleting ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
