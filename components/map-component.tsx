@@ -23,21 +23,13 @@ function PopupImage({ src, alt }: { src?: string; alt: string }) {
   }
 
   return (
-    <div className="relative h-36 overflow-hidden bg-muted">
-      <img
-        src={src}
-        alt=""
-        aria-hidden="true"
-        className="absolute inset-0 size-full scale-110 object-cover blur-md brightness-75"
-      />
-      <img
-        src={src}
-        alt={alt}
-        className="relative size-full object-contain"
-        loading="lazy"
-        onError={() => setHasFailed(true)}
-      />
-    </div>
+    <img
+      src={src}
+      alt={alt}
+      className="block h-28 w-full bg-muted object-cover"
+      loading="lazy"
+      onError={() => setHasFailed(true)}
+    />
   )
 }
 
