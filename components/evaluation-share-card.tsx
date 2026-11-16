@@ -5,7 +5,7 @@ import { Building2, Check, Copy, Share2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { formatEvaluationDuration, type EvaluationResult } from "@/lib/evaluation-results"
 
-export const evaluationInviteUrl = "https://fiscaliza-sp-cmp.vercel.app/#avaliacao"
+export const evaluationInviteUrl = "https://fiscaliza-sp-cmp.vercel.app/"
 export const evaluationInviteText = `Participei do desafio cidadão do FiscalizaSP! Explore a plataforma, participe da avaliação acadêmica e compare seu resultado comigo: ${evaluationInviteUrl}`
 
 export function EvaluationShareCard({ result, completedTasks }: { result: EvaluationResult; completedTasks: number }) {
@@ -74,7 +74,7 @@ export function EvaluationShareCard({ result, completedTasks }: { result: Evalua
           </div>
         </div>
         <footer className="border-t px-6 py-4 text-sm text-muted-foreground">
-          <a href={evaluationInviteUrl} className="break-all underline-offset-4 hover:underline">fiscaliza-sp-cmp.vercel.app/#avaliacao</a>
+          <a href={evaluationInviteUrl} className="break-all underline-offset-4 hover:underline">fiscaliza-sp-cmp.vercel.app</a>
         </footer>
       </article>
       <div className="text-center">

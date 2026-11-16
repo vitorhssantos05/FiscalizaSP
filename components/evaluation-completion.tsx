@@ -67,7 +67,7 @@ function CompletionContent({ onExplore }: { onExplore: () => void }) {
           <>
             <header className="flex flex-col gap-4">
               <p className="flex items-center gap-2 text-sm font-medium text-primary"><ShieldCheck aria-hidden="true" className="size-4" />Avaliação salva com sucesso</p>
-              <h1 ref={heading} tabIndex={-1} id="completion-title" className="text-balance text-3xl font-bold tracking-tight outline-none md:text-4xl"><span aria-hidden="true">🎉 </span>Missão FiscalizaSP concluída!</h1>
+              <h1 ref={heading} tabIndex={-1} id="completion-title" className="text-balance text-3xl font-bold tracking-tight outline-none md:text-4xl">Missão FiscalizaSP concluída!</h1>
               <p className="text-pretty leading-relaxed text-muted-foreground">Você explorou a plataforma e contribuiu para uma pesquisa acadêmica sobre participação cidadã. Veja como foi sua experiência!</p>
             </header>
             <Card>
