@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Map, List, MapPin } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 // Dynamic import for map to avoid SSR issues
 const MapComponent = dynamic(
@@ -32,11 +33,14 @@ interface ExplorePageProps {
   allowDetails?: boolean
   onResearchAction?: (action: ResearchAction, occurrenceId?: string) => void
   onOccurrenceLocated?: (view: "map" | "list", occurrenceId: string) => void
+  initialView?: "map" | "list"
+  highlightListToggle?: boolean
 }
 
-export function ExplorePage({ embedded = false, allowDetails = true, onResearchAction, onOccurrenceLocated }: ExplorePageProps = {}) {
+export function ExplorePage({ embedded = false, allowDetails = true, onResearchAction, onOccurrenceLocated, initialView, highlightListToggle = false }: ExplorePageProps = {}) {
   const { occurrences } = useApp()
-  const [viewMode, setViewMode] = useState<"map" | "list">(embedded ? "list" : "map")
+  const [viewMode, setViewMode] = useState<"map" | "list">(initialView ?? (embedded ? "list" : "map"))
+  const showListHint = highlightListToggle && viewMode === "map"
   const [selectedOccurrenceId, setSelectedOccurrenceId] = useState<string | null>(null)
   const [detailSheetOpen, setDetailSheetOpen] = useState(false)
   const selectedOccurrence = occurrences.find(
@@ -73,18 +77,32 @@ export function ExplorePage({ embedded = false, allowDetails = true, onResearchA
             <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 leading-snug text-amber-700 dark:text-amber-300 text-pretty">Inclui alguns exemplos demonstrativos</span>
           </p>
         </div>
-        <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "map" | "list")}>
-          <TabsList>
-            <TabsTrigger value="map" className="gap-2">
-              <Map className="h-4 w-4" />
-              <span className="hidden sm:inline">Mapa</span>
-            </TabsTrigger>
-            <TabsTrigger value="list" className="gap-2">
-              <List className="h-4 w-4" />
-              <span className="hidden sm:inline">Lista</span>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="relative shrink-0">
+          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "map" | "list")}>
+            <TabsList>
+              <TabsTrigger value="map" className="gap-2">
+                <Map className="h-4 w-4" />
+                <span className="hidden sm:inline">Mapa</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="list"
+                aria-describedby={showListHint ? "list-toggle-hint" : undefined}
+                className={cn("gap-2", showListHint && "ring-2 ring-destructive ring-offset-2 ring-offset-background")}
+              >
+                <List className="h-4 w-4" />
+                <span className="hidden sm:inline">Lista</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          {showListHint && (
+            <p
+              id="list-toggle-hint"
+              className="pointer-events-none absolute right-0 top-full z-[1000] mt-2 whitespace-nowrap rounded-md bg-destructive px-2 py-1 text-xs font-medium text-destructive-foreground shadow-md"
+            >
+              Clique aqui para ver a lista
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Content */}

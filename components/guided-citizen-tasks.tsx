@@ -44,7 +44,7 @@ const taskDefinitions: TaskDefinition[] = [
   {
     id: "find-occurrence",
     title: "Localizar uma ocorrência",
-    instruction: "Encontre a mesma ocorrência na lista e no mapa. Nesta etapa, “Ver detalhes” fica indisponível; a consulta será feita na próxima tarefa.",
+    instruction: "Localize uma ocorrência no mapa e clique em um dos marcadores para visualizar a ocorrência.",
     view: "explore",
   },
   {
@@ -249,6 +249,11 @@ export function GuidedCitizenTasks({ onFinish, onAbandon }: GuidedCitizenTasksPr
   const mapLocationSelected = Boolean(currentAttempt?.mapOccurrenceId)
   const listLocationSelected = Boolean(currentAttempt?.listOccurrenceId)
   const locationMismatch = mapLocationSelected && listLocationSelected && currentAttempt?.mapOccurrenceId !== currentAttempt?.listOccurrenceId
+  const findTaskInProgress = task?.id === "find-occurrence" && currentAttempt?.status === "in-progress"
+  const findStep = mapLocationSelected ? 2 : 1
+  const taskInstruction = task?.id === "find-occurrence" && findStep === 2
+    ? "Agora, alterne para a visualização em Lista e localize a mesma ocorrência que você encontrou no mapa."
+    : task?.instruction
   const interactionChecklist = [
     { event: "occurrence-opened", label: "Abrir e consultar os detalhes" },
     { event: "comment-added", label: "Publicar um comentário" },
@@ -332,14 +337,17 @@ export function GuidedCitizenTasks({ onFinish, onAbandon }: GuidedCitizenTasksPr
               </div>
               <div className="flex min-w-0 flex-col gap-1">
                 <CardTitle id="guided-tasks-title" className="text-lg">{task.title}</CardTitle>
-                <CardDescription className="leading-relaxed">{task.instruction}</CardDescription>
+                {task.id === "find-occurrence" && (
+                  <p className="text-xs font-medium text-primary">Etapa {findStep} de 2 · {findStep === 1 ? "Encontrar no mapa" : "Encontrar na lista"}</p>
+                )}
+                <CardDescription className="leading-relaxed" aria-live={task.id === "find-occurrence" ? "polite" : undefined}>{taskInstruction}</CardDescription>
               </div>
             </CardHeader>
             {task.id === "find-occurrence" && (
               <CardContent className="pt-0">
                 <div className="flex flex-wrap gap-2 text-xs" aria-live="polite">
-                  <span className={`rounded-full border px-3 py-1 ${currentAttempt.events.includes("list-viewed") ? "border-primary/40 bg-primary/10 text-primary" : "text-muted-foreground"}`}>Lista: {listLocationSelected ? "ocorrência localizada" : currentAttempt.events.includes("list-viewed") ? "selecione uma ocorrência" : "a consultar"}</span>
-                  <span className={`rounded-full border px-3 py-1 ${currentAttempt.events.includes("map-viewed") ? "border-primary/40 bg-primary/10 text-primary" : "text-muted-foreground"}`}>Mapa: {mapLocationSelected ? "ocorrência localizada" : currentAttempt.events.includes("map-viewed") ? "selecione uma ocorrência" : "a consultar"}</span>
+                  <span className={`rounded-full border px-3 py-1 ${currentAttempt.events.includes("map-viewed") ? "border-primary/40 bg-primary/10 text-primary" : "text-muted-foreground"}`}>1. Mapa: {mapLocationSelected ? "ocorrência localizada" : currentAttempt.events.includes("map-viewed") ? "clique em um marcador" : "a consultar"}</span>
+                  <span className={`rounded-full border px-3 py-1 ${currentAttempt.events.includes("list-viewed") ? "border-primary/40 bg-primary/10 text-primary" : "text-muted-foreground"}`}>2. Lista: {listLocationSelected ? "ocorrência localizada" : currentAttempt.events.includes("list-viewed") ? "selecione a mesma ocorrência" : "a consultar"}</span>
                 </div>
                 {locationMismatch && <p className="mt-2 text-sm text-amber-600" role="status">Selecione a mesma ocorrência na lista e no mapa para concluir esta tarefa.</p>}
               </CardContent>
@@ -372,7 +380,10 @@ export function GuidedCitizenTasks({ onFinish, onAbandon }: GuidedCitizenTasksPr
           {task.view === "explore" ? (
             <div className="h-[calc(100dvh-16rem)] min-h-[400px] overflow-hidden rounded-xl border bg-background">
               <ExplorePage
+                key={task.id}
                 embedded
+                initialView={task.id === "find-occurrence" ? "map" : "list"}
+                highlightListToggle={findTaskInProgress && mapLocationSelected && !listLocationSelected}
                 allowDetails={task.id === "interact-with-occurrence"}
                 onResearchAction={(action, occurrenceId) => recordTaskAction(action, { occurrenceId })}
                 onOccurrenceLocated={recordOccurrenceLocation}
