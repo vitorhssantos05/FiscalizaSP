@@ -41,6 +41,17 @@ export async function finalizeEvaluation(answers: Json[]) {
   await sendEvaluationAction({ action: "finalize", answers })
 }
 
+export async function fetchEvaluationResult(): Promise<import("@/lib/evaluation-results").EvaluationResult> {
+  const token = await getAnonymousAccessToken()
+  if (!token) throw new EvaluationRequestError("Sessão anônima indisponível.", 401)
+  const response = await fetch("/api/evaluation/result", {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  })
+  if (!response.ok) throw new EvaluationRequestError("Não foi possível consultar os resultados.", response.status)
+  return response.json()
+}
+
 export async function withdrawEvaluation() {
   try {
     await sendEvaluationAction({ action: "withdraw" })

@@ -2,9 +2,9 @@ import { NextResponse } from "next/server"
 import { createAdminSupabase } from "@/lib/supabase/admin"
 import { evaluationTaskCatalog, likertStatements, openQuestions, profileQuestions } from "@/lib/evaluation-catalog"
 
-export const dynamic = "force-dynamic"
+import { average, summarizeEvaluationDurations } from "@/lib/evaluation-results"
 
-const average = (values: number[]) => (values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null)
+export const dynamic = "force-dynamic"
 
 export async function GET() {
   const supabase = createAdminSupabase()
@@ -75,7 +75,7 @@ export async function GET() {
       inProgress: participants.filter((participant) => participant.status === "in_progress").length,
       abandoned: participants.filter((participant) => participant.status === "withdrawn").length,
       completionRate: participants.length ? completedParticipants.length / participants.length : null,
-      averageTotalDurationMs: average(completedParticipants.flatMap((participant) => participant.total_duration_ms === null ? [] : [participant.total_duration_ms])),
+      averageTotalDurationMs: summarizeEvaluationDurations(completedParticipants).averageTotalDurationMs,
       averagePracticalDurationMs: average(completedParticipants.filter((participant) => participant.practical_duration_ms !== null).map((participant) => participant.practical_duration_ms ?? 0)),
       averageQuestionnaireDurationMs: average(completedParticipants.flatMap((participant) => participant.questionnaire_duration_ms === null ? [] : [participant.questionnaire_duration_ms])),
       overallLikertAverage: average(likert.flatMap((item) => (item.average === null ? [] : [item.average]))),
