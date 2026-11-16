@@ -34,7 +34,7 @@ export async function GET() {
       completed: completed.length,
       skipped: rows.filter((task) => task.status === "skipped").length,
       completionRate: completedParticipants.length ? completed.length / completedParticipants.length : null,
-      averageDurationMs: average(completed.map((task) => task.duration_ms ?? 0)),
+      averageDurationMs: average(completed.flatMap((task) => task.duration_ms === null ? [] : [task.duration_ms])),
     }
   })
 
@@ -75,9 +75,9 @@ export async function GET() {
       inProgress: participants.filter((participant) => participant.status === "in_progress").length,
       abandoned: participants.filter((participant) => participant.status === "withdrawn").length,
       completionRate: participants.length ? completedParticipants.length / participants.length : null,
-      averageTotalDurationMs: average(completedParticipants.map((participant) => participant.total_duration_ms ?? 0)),
+      averageTotalDurationMs: average(completedParticipants.flatMap((participant) => participant.total_duration_ms === null ? [] : [participant.total_duration_ms])),
       averagePracticalDurationMs: average(completedParticipants.filter((participant) => participant.practical_duration_ms !== null).map((participant) => participant.practical_duration_ms ?? 0)),
-      averageQuestionnaireDurationMs: average(completedParticipants.map((participant) => participant.questionnaire_duration_ms ?? 0)),
+      averageQuestionnaireDurationMs: average(completedParticipants.flatMap((participant) => participant.questionnaire_duration_ms === null ? [] : [participant.questionnaire_duration_ms])),
       overallLikertAverage: average(likert.flatMap((item) => (item.average === null ? [] : [item.average]))),
     },
     taskSummary,
