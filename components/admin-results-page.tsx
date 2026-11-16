@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Download, RefreshCw } from "lucide-react"
+import { LikertAveragesChart, TaskDurationChart } from "@/components/research-results-charts"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -127,7 +128,7 @@ export function AdminResultsPage() {
     ["Abandonos", totals.abandoned],
     ["Taxa de conclusão", formatPercent(totals.completionRate)],
     ["Tempo médio total", formatDuration(totals.averageTotalDurationMs)],
-    ["Tempo médio das tarefas", formatDuration(totals.averagePracticalDurationMs)],
+    ["Tempo médio da etapa prática", formatDuration(totals.averagePracticalDurationMs)],
     ["Tempo médio do questionário", formatDuration(totals.averageQuestionnaireDurationMs)],
   ]
 
@@ -157,10 +158,10 @@ export function AdminResultsPage() {
         </Alert>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 min-[360px]:grid-cols-2 lg:grid-cols-4">
             {summaryCards.map(([label, value]) => (
-              <Card key={label}>
-                <CardContent className="pt-6">
+              <Card key={label} className="py-4">
+                <CardContent className="px-4">
                   <p className="text-2xl font-bold">{value}</p>
                   <p className="text-sm text-muted-foreground">{label}</p>
                 </CardContent>
@@ -173,6 +174,7 @@ export function AdminResultsPage() {
               <CardTitle>Tarefas práticas</CardTitle>
             </CardHeader>
             <CardContent>
+              <TaskDurationChart tasks={results.taskSummary} formatDuration={formatDuration} />
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -206,6 +208,7 @@ export function AdminResultsPage() {
               </p>
             </CardHeader>
             <CardContent>
+              <LikertAveragesChart statements={results.likert} />
               <Table>
                 <TableHeader>
                   <TableRow>
