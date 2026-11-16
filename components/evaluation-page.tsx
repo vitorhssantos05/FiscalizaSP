@@ -355,11 +355,7 @@ export function EvaluationPage() {
               </div>
             </div>
           </CardContent>
-          <CardFooter className="flex flex-col-reverse gap-3 border-t pt-6 sm:flex-row sm:justify-between">
-            <Button type="button" variant="ghost" onClick={declineParticipation}>
-              <X data-icon="inline-start" />
-              Não desejo participar
-            </Button>
+          <CardFooter className="flex flex-col border-t pt-6 sm:flex-row sm:justify-end">
             <Button type="button" onClick={beginProfile} disabled={!consentAccepted}>
               Continuar para o perfil
               <ArrowRight data-icon="inline-end" />
