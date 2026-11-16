@@ -34,6 +34,17 @@ function AppContent() {
   const [nicknameInput, setNicknameInput] = useState("")
 
   useEffect(() => {
+    if (window.location.hash === "#avaliacao") setCurrentPage("evaluation")
+  }, [])
+
+  const exploreAfterEvaluation = () => {
+    window.history.replaceState(null, "", window.location.pathname + window.location.search)
+    setIsAdminDemoMode(false)
+    setCurrentPage("explore")
+    window.scrollTo(0, 0)
+  }
+
+  useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add("dark")
     }
@@ -58,7 +69,7 @@ function AppContent() {
       case "results":
         return <AdminResultsPage />
       case "evaluation":
-        return <EvaluationPage />
+        return <EvaluationPage onExplore={exploreAfterEvaluation} />
       default:
         return <HomePage onNavigate={setCurrentPage} />
     }

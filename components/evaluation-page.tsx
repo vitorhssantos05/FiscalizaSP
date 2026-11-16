@@ -13,6 +13,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { AppProvider } from "@/lib/app-context"
 import { GuidedCitizenTasks, type GuidedTaskSummary } from "@/components/guided-citizen-tasks"
 import { EvaluationQuestionnaire } from "@/components/evaluation-questionnaire"
+import { EvaluationCompletion } from "@/components/evaluation-completion"
 import { createInitialEvaluationMetrics, finalizeEvaluationMetrics, type EvaluationMetrics, type QuestionnaireMetrics } from "@/lib/evaluation-metrics"
 import { EvaluationRequestError, finalizeEvaluation, recordEvaluationTasks, startAnonymousParticipant, startEvaluation, withdrawEvaluation } from "@/lib/supabase/anonymous-participant"
 import { profileQuestions as questions, type ProfileAnswerKey as AnswerKey } from "@/lib/evaluation-catalog"
@@ -30,7 +31,7 @@ const emptyAnswers: Answers = {
 
 const stepLabels = ["Consentimento", "Perfil", "Revisão"]
 
-export function EvaluationPage() {
+export function EvaluationPage({ onExplore }: { onExplore: () => void }) {
   const [phase, setPhase] = useState<ResearchPhase>("introduction")
   const [sessionStatus, setSessionStatus] = useState<"checking" | "active" | "completed">("checking")
   const [consentAccepted, setConsentAccepted] = useState(false)
@@ -184,19 +185,6 @@ export function EvaluationPage() {
     setPhase("introduction")
   }
 
-  const startAnotherParticipant = () => {
-    completionSubmittedRef.current = false
-    try {
-      window.sessionStorage.removeItem("fiscalizasp-evaluation-completed")
-    } catch {
-      // No persistent identity or answers are used for this provisional marker.
-    }
-    clearDraft()
-    setSessionMetrics(createInitialEvaluationMetrics())
-    setSessionStatus("active")
-    setPhase("introduction")
-  }
-
   if (persistenceError) {
     return (
       <section className="container mx-auto max-w-xl px-4 py-12" aria-live="assertive">
@@ -224,25 +212,7 @@ export function EvaluationPage() {
   }
 
   if (sessionStatus === "completed") {
-    return (
-      <section className="container mx-auto max-w-xl px-4 py-12" aria-labelledby="completed-session-title">
-        <Card>
-          <CardHeader>
-            <div className="mb-2 flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <Check aria-hidden="true" className="size-6" />
-            </div>
-            <CardTitle id="completed-session-title">Avaliação já concluída nesta sessão</CardTitle>
-            <CardDescription>As respostas e métricas desta avaliação foram salvas no banco de dados. Nenhum dado pessoal identificável é coletado.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm leading-relaxed text-muted-foreground">Se outra pessoa for participar neste dispositivo, inicie uma nova sessão de demonstração. O marcador técnico não identifica participantes diferentes.</p>
-          </CardContent>
-          <CardFooter className="border-t pt-6">
-            <Button type="button" onClick={startAnotherParticipant}>Iniciar sessão para outra pessoa</Button>
-          </CardFooter>
-        </Card>
-      </section>
-    )
+    return <EvaluationCompletion onExplore={onExplore} />
   }
 
   if (phase === "tasks") {
