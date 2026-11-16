@@ -8,6 +8,39 @@ import type { Occurrence, Priority, OccurrenceStatus } from "@/lib/types"
 import { categoryLabels, statusLabels, calculateDynamicPriority } from "@/lib/types"
 import { MapPin, Info, ChevronDown, ChevronUp } from "lucide-react"
 
+function PopupImage({ src, alt }: { src?: string; alt: string }) {
+  const [hasFailed, setHasFailed] = useState(false)
+
+  if (!src || hasFailed) {
+    return (
+      <div className="popup-header" role="img" aria-label="Imagem não disponível">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="popup-header-icon" aria-hidden="true">
+          <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+          <circle cx="12" cy="10" r="3"/>
+        </svg>
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative h-36 overflow-hidden bg-muted">
+      <img
+        src={src}
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 size-full scale-110 object-cover blur-md brightness-75"
+      />
+      <img
+        src={src}
+        alt={alt}
+        className="relative size-full object-contain"
+        loading="lazy"
+        onError={() => setHasFailed(true)}
+      />
+    </div>
+  )
+}
+
 interface MapComponentProps {
   occurrences: Occurrence[]
   onViewDetails: (occurrence: Occurrence) => void
@@ -238,13 +271,11 @@ export function MapComponent({
             >
               <Popup className="custom-popup" maxWidth={300} minWidth={280}>
                 <div className="popup-wrapper">
-                  {/* Header com placeholder de imagem */}
-                  <div className="popup-header">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="popup-header-icon">
-                      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
-                      <circle cx="12" cy="10" r="3"/>
-                    </svg>
-                  </div>
+                  <PopupImage
+                    key={`${occurrence.id}-${occurrence.imageUrl ?? "sem-imagem"}`}
+                    src={occurrence.imageUrl}
+                    alt={`Imagem da ocorrência: ${occurrence.title}`}
+                  />
                   
                   {/* Corpo do popup */}
                   <div className="popup-body">
