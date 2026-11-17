@@ -1,9 +1,7 @@
 "use client"
 
 import { useEffect, useRef } from "react"
-import { ShieldAlert } from "lucide-react"
 import { AdminPage } from "@/components/admin-page"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useApp } from "@/lib/app-context"
 
 export type AdminEvaluationTaskId = "admin-panel"
@@ -36,20 +34,9 @@ export function AdminEvaluationStage({ onComplete }: AdminEvaluationStageProps) 
   }, [occurrences])
 
   return (
-    <div className="flex flex-col gap-4">
-      <Alert>
-        <ShieldAlert aria-hidden="true" />
-        <AlertTitle>Painel demonstrativo e isolado</AlertTitle>
-        <AlertDescription>Selecione na tabela uma ocorrência com status Pendente e altere para Resolvida. A tarefa só será concluída quando essa mudança aparecer nos dados temporários desta avaliação.</AlertDescription>
-      </Alert>
-
-      <AdminPage />
-
-      <Alert>
-        <ShieldAlert aria-hidden="true" />
-        <AlertTitle>Sem acesso administrativo real</AlertTitle>
-        <AlertDescription>O painel reutiliza a tabela existente, mas as alterações ficam no AppProvider isolado da avaliação e não modificam ocorrências públicas.</AlertDescription>
-      </Alert>
+    <div className="flex min-w-0 flex-col gap-2">
+      <p className="text-sm text-muted-foreground">Simulação isolada: as alterações não modificam ocorrências públicas.</p>
+      <AdminPage evaluationMode />
     </div>
   )
 }

@@ -288,10 +288,10 @@ export function OccurrenceDetailSheet({
           onInteractOutside={(event) => {
             if (embedded) event.preventDefault()
           }}
-          className={`overflow-hidden w-full p-0 flex flex-col h-full sm:max-w-lg ${embedded ? "!absolute !inset-y-auto !top-14 !bottom-0 !right-0 !h-auto !max-h-none !w-full !max-w-none border-l-0 lg:!left-auto lg:!right-0 lg:!w-[min(38rem,60%)]" : ""}`}
+          className={`overflow-hidden w-full p-0 flex flex-col h-full sm:max-w-lg ${embedded ? "!relative !inset-auto !h-auto !max-h-none !w-full !max-w-none !translate-x-0 border-0 shadow-none" : ""}`}
         >
-          <SheetHeader className="flex-shrink-0 p-6 pb-0">
-            <SheetTitle className="text-left pr-8 line-clamp-2">{occurrence.title}</SheetTitle>
+          <SheetHeader className={embedded ? "shrink-0 p-3 pb-0" : "shrink-0 p-6 pb-0"}>
+            <SheetTitle className="text-left pr-8 break-words leading-snug">{occurrence.title}</SheetTitle>
             {occurrence.isDemonstration && (
               <Badge variant="secondary" className="w-fit text-xs">
                 Demonstração: exemplo fictício, interações não são salvas
@@ -299,9 +299,9 @@ export function OccurrenceDetailSheet({
             )}
           </SheetHeader>
 
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-6 pt-4">
-            <div className="space-y-6 pb-6">
-              <div className="aspect-video overflow-hidden rounded-lg bg-muted">
+          <div className={embedded ? "min-w-0 p-3" : "min-h-0 flex-1 overflow-y-auto overscroll-contain p-6 pt-4"}>
+            <div className={embedded ? "flex flex-col gap-4" : "space-y-6 pb-6"}>
+              <div className={embedded ? "h-40 overflow-hidden rounded-lg bg-muted sm:h-48" : "aspect-video overflow-hidden rounded-lg bg-muted"}>
                 <OccurrenceImage
                   key={`${occurrence.id}-${occurrence.imageUrl ?? "sem-imagem"}`}
                   src={occurrence.imageUrl}

@@ -271,7 +271,7 @@ export function AppProvider({
     const newOccurrence: Occurrence = {
       ...fields,
       id: `occ-${Date.now()}`,
-      status: "pendente",
+      status: "em_analise",
       createdAt: new Date(),
       supports: 0,
       confirmations: 0,

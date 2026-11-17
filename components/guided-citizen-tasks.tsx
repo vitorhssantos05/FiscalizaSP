@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
+import { EvaluationTaskHint } from "@/components/evaluation-task-hint"
 import { AdminEvaluationStage, type AdminEvaluationEvent } from "@/components/admin-evaluation-stage"
 import { ExplorePage } from "@/components/explore-page"
 import { RegisterPage } from "@/components/register-page"
@@ -111,6 +112,7 @@ export function GuidedCitizenTasks({ onFinish, onAbandon }: GuidedCitizenTasksPr
   const [taskIndex, setTaskIndex] = useState(0)
   const [attempts, setAttempts] = useState<TaskAttempt[]>(createInitialAttempts)
   const [confirmExitOpen, setConfirmExitOpen] = useState(false)
+  const [exploreView, setExploreView] = useState<"map" | "list">("map")
   const [currentTime, setCurrentTime] = useState(() => Date.now())
 
   useEffect(() => {
@@ -262,7 +264,7 @@ export function GuidedCitizenTasks({ onFinish, onAbandon }: GuidedCitizenTasksPr
   ] as const
 
   return (
-    <section className="container mx-auto flex max-w-6xl flex-col gap-4 px-4 py-6 pb-24" aria-labelledby="guided-tasks-title">
+    <section className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-3 px-2 py-3 sm:px-4 lg:py-5" aria-labelledby="guided-tasks-title">
       <header className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Badge variant="secondary" className="gap-1.5">
@@ -279,14 +281,14 @@ export function GuidedCitizenTasks({ onFinish, onAbandon }: GuidedCitizenTasksPr
         </div>
         <div className="flex flex-col gap-2">
           <Progress value={progress} aria-label="Progresso da avaliação" />
-          <ol className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 sm:gap-2" aria-label="Progresso das tarefas práticas">
+          <ol className="hidden gap-2 lg:grid lg:grid-cols-4" aria-label="Progresso das tarefas práticas">
             {taskDefinitions.map((item, index) => {
               const status = attempts[index].status
               const isCurrent = index === taskIndex && status === "in-progress"
               const label = status === "completed" ? "concluída" : status === "skipped" ? "pulada" : status === "abandoned" ? "abandonada" : isCurrent ? "em andamento" : "a iniciar"
               return (
                 <li key={item.id} aria-current={isCurrent ? "step" : undefined} aria-label={`Tarefa ${index + 1}: ${item.title}, ${label}`} className="min-w-0">
-                  <div title={`${index + 1}. ${item.title}`} className={`flex min-h-9 items-center justify-center gap-1 rounded-md border px-1 text-center text-[10px] leading-tight sm:text-xs ${status === "completed" ? "border-primary/40 bg-primary/10 text-primary" : status === "skipped" ? "border-border bg-muted text-muted-foreground" : isCurrent ? "border-primary bg-primary/5 font-medium text-foreground" : "border-border text-muted-foreground"}`}>
+                  <div title={`${index + 1}. ${item.title}`} className={`flex min-h-9 items-center justify-center gap-1 rounded-md border px-1 text-center text-sm leading-snug ${status === "completed" ? "border-primary/40 bg-primary/10 text-primary" : status === "skipped" ? "border-border bg-muted text-muted-foreground" : isCurrent ? "border-primary bg-primary/5 font-medium text-foreground" : "border-border text-muted-foreground"}`}>
                     {status === "completed" ? <Check aria-hidden="true" className="size-3 shrink-0" /> : null}
                     <span className="sm:hidden">{index + 1}. {item.title}</span>
                     <span className="hidden min-w-0 truncate sm:inline">{index + 1}. {item.title}</span>
@@ -330,8 +332,8 @@ export function GuidedCitizenTasks({ onFinish, onAbandon }: GuidedCitizenTasksPr
         </Card>
       ) : (
         <>
-          <Card>
-            <CardHeader className="flex flex-row items-start gap-3">
+          <Card className="gap-2 py-3">
+            <CardHeader className="flex flex-row items-start gap-2 px-3">
               <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <span className="text-sm font-semibold">{taskIndex + 1}</span>
               </div>
@@ -344,16 +346,15 @@ export function GuidedCitizenTasks({ onFinish, onAbandon }: GuidedCitizenTasksPr
               </div>
             </CardHeader>
             {task.id === "find-occurrence" && (
-              <CardContent className="pt-0">
-                <div className="flex flex-wrap gap-2 text-xs" aria-live="polite">
-                  <span className={`rounded-full border px-3 py-1 ${currentAttempt.events.includes("map-viewed") ? "border-primary/40 bg-primary/10 text-primary" : "text-muted-foreground"}`}>1. Mapa: {mapLocationSelected ? "ocorrência localizada" : currentAttempt.events.includes("map-viewed") ? "clique em um marcador" : "a consultar"}</span>
-                  <span className={`rounded-full border px-3 py-1 ${currentAttempt.events.includes("list-viewed") ? "border-primary/40 bg-primary/10 text-primary" : "text-muted-foreground"}`}>2. Lista: {listLocationSelected ? "ocorrência localizada" : currentAttempt.events.includes("list-viewed") ? "selecione a mesma ocorrência" : "a consultar"}</span>
-                </div>
+              <CardContent className="px-3 pt-0">
+                <p className="text-sm text-muted-foreground" aria-live="polite">
+                  Mapa: {mapLocationSelected ? "localizada" : "a localizar"} · Lista: {listLocationSelected ? "selecionada" : "a localizar"}
+                </p>
                 {locationMismatch && <p className="mt-2 text-sm text-amber-600" role="status">Selecione a mesma ocorrência na lista e no mapa para concluir esta tarefa.</p>}
               </CardContent>
             )}
             {task.id === "interact-with-occurrence" && (
-              <CardContent className="pt-0">
+              <CardContent className="px-3 pt-0">
                 <ol className="grid gap-2 sm:grid-cols-2" aria-label="Ações necessárias para concluir a tarefa">
                   {interactionChecklist.map(({ event, label }) => {
                     const completed = currentAttempt.events.includes(event)
@@ -367,7 +368,7 @@ export function GuidedCitizenTasks({ onFinish, onAbandon }: GuidedCitizenTasksPr
               </CardContent>
             )}
             {task.id === "register-test" && (
-              <CardContent className="pt-0">
+              <CardContent className="px-3 pt-0">
                 <Alert>
                   <ShieldAlert aria-hidden="true" />
                   <AlertTitle>Use somente dados fictícios</AlertTitle>
@@ -377,11 +378,14 @@ export function GuidedCitizenTasks({ onFinish, onAbandon }: GuidedCitizenTasksPr
             )}
           </Card>
 
+          <EvaluationTaskHint key={task.id} taskId={task.id} elapsedSeconds={taskElapsedSeconds} active={currentAttempt.status === "in-progress"} view={exploreView} />
+
           {task.view === "explore" ? (
-            <div className="h-[calc(100dvh-16rem)] min-h-[400px] overflow-hidden rounded-xl border bg-background">
+            <div className="min-w-0 rounded-xl border bg-background">
               <ExplorePage
                 key={task.id}
                 embedded
+                onViewChange={setExploreView}
                 initialView={task.id === "find-occurrence" ? "map" : "list"}
                 highlightListToggle={findTaskInProgress && mapLocationSelected && !listLocationSelected}
                 allowDetails={task.id === "interact-with-occurrence"}

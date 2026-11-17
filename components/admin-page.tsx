@@ -6,7 +6,7 @@ import type { Occurrence, OccurrenceStatus } from "@/lib/types"
 import { categoryLabels, statusLabels, calculateDynamicPriority, priorityLabels } from "@/lib/types"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
@@ -64,11 +64,32 @@ const COLORS = {
   orangeLight: "#FB923C",
 }
 
+function OccurrenceStatusSelect({ occurrence, onChange }: {
+  occurrence: Occurrence
+  onChange: (id: string, status: OccurrenceStatus) => void
+}) {
+  return (
+    <Select value={occurrence.status} onValueChange={(value) => onChange(occurrence.id, value as OccurrenceStatus)}>
+      <SelectTrigger className="min-h-11 w-40 max-w-full" aria-label={`Status de ${occurrence.title}`}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectGroup>
+          <SelectItem value="resolvida">Resolvida</SelectItem>
+          <SelectItem value="pendente">Pendente</SelectItem>
+          <SelectItem value="em_analise">Em análise</SelectItem>
+        </SelectGroup>
+      </SelectContent>
+    </Select>
+  )
+}
+
 interface AdminPageProps {
+  evaluationMode?: boolean
   onResearchStatusChange?: (occurrence: Occurrence, nextStatus: OccurrenceStatus) => void
 }
 
-export function AdminPage({ onResearchStatusChange }: AdminPageProps = {}) {
+export function AdminPage({ evaluationMode = false, onResearchStatusChange }: AdminPageProps = {}) {
   const { occurrences, updateOccurrenceStatus, getDynamicPriority, canDeleteOccurrence, deleteOccurrence } = useApp()
   const [occurrenceToDelete, setOccurrenceToDelete] = useState<Occurrence | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -152,7 +173,8 @@ export function AdminPage({ onResearchStatusChange }: AdminPageProps = {}) {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className={evaluationMode ? "min-w-0 w-full" : "container mx-auto px-4 py-8"}>
+      {!evaluationMode && <>
       <div className="mb-8">
         <h1 className="text-2xl md:text-3xl font-bold text-foreground">Painel Administrativo</h1>
         <p className="text-muted-foreground mt-2">
@@ -397,18 +419,39 @@ export function AdminPage({ onResearchStatusChange }: AdminPageProps = {}) {
         </Card>
       </div>
 
+      </>}
       {/* Occurrences Table */}
-      <Card className="border-border/50">
+      <Card className="min-w-0 border-border/50">
         <CardHeader>
           <CardTitle className="text-lg">Gerenciar Ocorrências</CardTitle>
           <CardDescription>
             Visualize e atualize o status das ocorrências registradas
           </CardDescription>
         </CardHeader>
-        <CardContent className="px-0 sm:px-6">
-          <div className="overflow-x-auto -mx-0 sm:mx-0">
-            <div className="max-h-[400px] overflow-y-auto">
-              <div className="min-w-[700px] px-4 sm:px-0">
+        <CardContent className="px-3 sm:px-4 lg:px-6">
+          <ul className="grid gap-3 sm:grid-cols-2 lg:hidden" aria-label="Gerenciar ocorrências">
+            {occurrences.map((occ) => (
+              <li key={occ.id} className="flex min-w-0 flex-col gap-2 rounded-lg border p-3">
+                <h3 className="break-words font-semibold leading-snug">{occ.title}</h3>
+                <p className="text-sm text-muted-foreground">{categoryLabels[occ.category]}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-medium">Status:</span>
+                  <OccurrenceStatusSelect occurrence={occ} onChange={handleStatusChange} />
+                </div>
+                {!evaluationMode && (
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
+                    <span>{priorityLabels[getDynamicPriority(occ)]} · {occ.supports} apoios</span>
+                    {canDeleteOccurrence(occ.id) && (
+                      <Button variant="ghost" size="icon" onClick={() => setOccurrenceToDelete(occ)} aria-label={`Excluir ocorrência ${occ.title}`}>
+                        <Trash2 />
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+          <div className="hidden min-w-0 lg:block">
                 <Table>
               <TableHeader>
                 <TableRow>
@@ -437,36 +480,7 @@ export function AdminPage({ onResearchStatusChange }: AdminPageProps = {}) {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Select
-                          value={occ.status}
-                          onValueChange={(value) =>
-                            handleStatusChange(occ.id, value as OccurrenceStatus)
-                          }
-                        >
-                          <SelectTrigger className="w-[140px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="resolvida">
-                            <span className="flex items-center gap-2">
-                              <span className="w-2 h-2 rounded-full bg-green-500" />
-                              Resolvida
-                            </span>
-                          </SelectItem>
-                          <SelectItem value="pendente">
-                            <span className="flex items-center gap-2">
-                              <span className="w-2 h-2 rounded-full bg-orange-600" />
-                              Pendente
-                            </span>
-                          </SelectItem>
-                          <SelectItem value="em_analise">
-                            <span className="flex items-center gap-2">
-                              <span className="w-2 h-2 rounded-full bg-blue-500" />
-                              Em análise
-                            </span>
-                          </SelectItem>
-                        </SelectContent>
-                        </Select>
+                        <OccurrenceStatusSelect occurrence={occ} onChange={handleStatusChange} />
                       </TableCell>
                       <TableCell>
                         <Badge
@@ -517,8 +531,6 @@ export function AdminPage({ onResearchStatusChange }: AdminPageProps = {}) {
                 })}
               </TableBody>
             </Table>
-              </div>
-            </div>
           </div>
         </CardContent>
       </Card>

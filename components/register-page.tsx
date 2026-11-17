@@ -250,15 +250,15 @@ export function RegisterPage({ onSuccess, demoMode = false, onResearchError }: R
   const isFormValid = title.trim() && description.trim() && category && selectedLocation
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="mb-8">
+    <div className={demoMode ? "w-full min-w-0 [&_[data-slot=card]]:gap-3 [&_[data-slot=card]]:py-4 [&_[data-slot=card-header]]:px-3 [&_[data-slot=card-content]]:px-3" : "container mx-auto px-4 py-8 max-w-4xl"}>
+      <div className={demoMode ? "sr-only" : "mb-8"}>
         <h1 className="text-2xl md:text-3xl font-bold text-foreground">Registrar Ocorrência</h1>
         <p className="text-muted-foreground mt-2">
           Registre problemas na infraestrutura urbana para que a comunidade possa validar e acompanhar
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-8">
+      <form onSubmit={handleSubmit} className={demoMode ? "flex flex-col gap-3" : "flex flex-col gap-8"}>
         {/* Basic Info */}
         <Card className="border-border/50">
           <CardHeader>
@@ -450,7 +450,7 @@ export function RegisterPage({ onSuccess, demoMode = false, onResearchError }: R
               </p>
             )}
 
-            <div className="h-[400px] rounded-lg overflow-hidden border border-border">
+            <div className={demoMode ? "h-[clamp(16rem,55dvh,25rem)] rounded-lg overflow-hidden border border-border" : "h-[400px] rounded-lg overflow-hidden border border-border"}>
               <MapComponent
                 occurrences={[]}
                 onViewDetails={() => {}}
