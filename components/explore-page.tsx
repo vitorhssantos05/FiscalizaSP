@@ -35,9 +35,10 @@ interface ExplorePageProps {
   onOccurrenceLocated?: (view: "map" | "list", occurrenceId: string) => void
   initialView?: "map" | "list"
   highlightListToggle?: boolean
+  onViewChange?: (view: "map" | "list") => void
 }
 
-export function ExplorePage({ embedded = false, allowDetails = true, onResearchAction, onOccurrenceLocated, initialView, highlightListToggle = false }: ExplorePageProps = {}) {
+export function ExplorePage({ embedded = false, allowDetails = true, onResearchAction, onOccurrenceLocated, initialView, highlightListToggle = false, onViewChange }: ExplorePageProps = {}) {
   const { occurrences } = useApp()
   const [viewMode, setViewMode] = useState<"map" | "list">(initialView ?? (embedded ? "list" : "map"))
   const showListHint = highlightListToggle && viewMode === "map"
@@ -49,8 +50,12 @@ export function ExplorePage({ embedded = false, allowDetails = true, onResearchA
   const onResearchActionRef = useRef(onResearchAction)
   onResearchActionRef.current = onResearchAction
 
+  const onViewChangeRef = useRef(onViewChange)
+  onViewChangeRef.current = onViewChange
+
   useEffect(() => {
     onResearchActionRef.current?.(viewMode === "map" ? "map-viewed" : "list-viewed")
+    onViewChangeRef.current?.(viewMode)
   }, [viewMode])
 
   const handleDetailsOpenChange = (open: boolean) => {
@@ -65,16 +70,16 @@ export function ExplorePage({ embedded = false, allowDetails = true, onResearchA
   }
 
   return (
-    <div className={embedded ? "relative flex h-full min-h-0 flex-col" : "flex flex-col h-[calc(100dvh-3.5rem-4rem)] lg:h-[calc(100vh-4rem)]"}>
+    <div className={cn("relative flex min-w-0 flex-col", !embedded && viewMode === "map" && "h-[calc(100dvh-3.5rem-1px-4rem-env(safe-area-inset-bottom,0px))] lg:h-[calc(100dvh-4rem-1px)]")}>
       {/* Header with toggle */}
-      <div className="flex items-center justify-between gap-3 p-3 sm:p-4 border-b border-border/50 bg-card/50 flex-shrink-0">
+      <div className={cn("flex flex-wrap items-center justify-between gap-2 border-b border-border/50 bg-card/50 shrink-0", embedded ? "p-2" : "p-3 sm:p-4")}>
         <div className="min-w-0 flex-1">
-          <h1 className="text-lg sm:text-xl font-bold text-foreground">Explorar Ocorrências</h1>
-          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:text-sm text-muted-foreground">
+          <h2 className={embedded ? "text-base font-semibold text-foreground" : "text-lg font-bold text-foreground sm:text-xl"}>{embedded ? "Ocorrências" : "Explorar Ocorrências"}</h2>
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
             <span>
               {occurrences.length} ocorrência{occurrences.length !== 1 ? "s" : ""} disponível{occurrences.length !== 1 ? "s" : ""}
             </span>
-            <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 leading-snug text-amber-700 dark:text-amber-300 text-pretty">Inclui alguns exemplos demonstrativos</span>
+            {!embedded && <span className="text-pretty">Inclui exemplos demonstrativos</span>}
           </p>
         </div>
         <div className="relative shrink-0">
@@ -82,7 +87,7 @@ export function ExplorePage({ embedded = false, allowDetails = true, onResearchA
             <TabsList>
               <TabsTrigger value="map" className="gap-2">
                 <Map className="h-4 w-4" />
-                <span className="hidden sm:inline">Mapa</span>
+                <span>Mapa</span>
               </TabsTrigger>
               <TabsTrigger
                 value="list"
@@ -90,7 +95,7 @@ export function ExplorePage({ embedded = false, allowDetails = true, onResearchA
                 className={cn("gap-2", showListHint && "ring-2 ring-destructive ring-offset-2 ring-offset-background")}
               >
                 <List className="h-4 w-4" />
-                <span className="hidden sm:inline">Lista</span>
+                <span>Lista</span>
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -106,7 +111,7 @@ export function ExplorePage({ embedded = false, allowDetails = true, onResearchA
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-hidden">
+      <div hidden={embedded && detailSheetOpen} className={cn("min-w-0", viewMode === "map" && (embedded ? "h-[clamp(18rem,55dvh,36rem)]" : "min-h-0 flex-1"))}>
         {viewMode === "map" ? (
           <MapComponent
             occurrences={occurrences}
@@ -117,6 +122,7 @@ export function ExplorePage({ embedded = false, allowDetails = true, onResearchA
           />
         ) : (
           <OccurrenceList
+            compact={embedded}
             onViewDetails={handleViewDetails}
             allowDetails={allowDetails}
             onOccurrenceSelect={(occurrence) => onOccurrenceLocated?.("list", occurrence.id)}

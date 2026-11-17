@@ -26,16 +26,20 @@ import {
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { OccurrenceImage } from "@/components/occurrence-image"
+import { OccurrenceTitlePreview } from "@/components/occurrence-title-preview"
+import { cn } from "@/lib/utils"
 
 interface OccurrenceListProps {
   onViewDetails: (occurrence: Occurrence) => void
   allowDetails?: boolean
+  compact?: boolean
   onOccurrenceSelect?: (occurrence: Occurrence) => void
 }
 
 type SortOption = "relevance" | "priority" | "supports" | "recent"
 
-export function OccurrenceList({ onViewDetails, allowDetails = true, onOccurrenceSelect }: OccurrenceListProps) {
+export function OccurrenceList({ onViewDetails, allowDetails = true, compact = false, onOccurrenceSelect }: OccurrenceListProps) {
+  const titlePreview = compact && !allowDetails
   const { occurrences, getDynamicPriority } = useApp()
   const [search, setSearch] = useState("")
   const [categoryFilter, setCategoryFilter] = useState<OccurrenceCategory | "all">("all")
@@ -159,21 +163,23 @@ export function OccurrenceList({ onViewDetails, allowDetails = true, onOccurrenc
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex min-w-0 flex-col">
       {/* Filters */}
-      <div className="p-4 border-b border-border/50 bg-card/50 space-y-3">
+      <div className={cn("grid min-w-0 grid-cols-2 gap-2 border-b border-border/50 bg-card/50 sm:grid-cols-4 [&>div]:min-w-0", compact ? "p-2" : "p-3 sm:p-4")}>
+        <div className="col-span-2 sm:col-span-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por título, descrição ou bairro..."
+            aria-label="Buscar ocorrências por título, descrição ou bairro"
+            placeholder="Buscar por nome ou bairro…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10"
           />
         </div>
-        <div className="flex flex-wrap gap-2">
+        </div>
           <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v as OccurrenceCategory | "all")}>
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger aria-label="Filtrar por categoria" className="min-h-11 w-full min-w-0 [&>span]:truncate">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Categoria" />
             </SelectTrigger>
@@ -188,7 +194,7 @@ export function OccurrenceList({ onViewDetails, allowDetails = true, onOccurrenc
           </Select>
 
           <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as OccurrenceStatus | "all")}>
-            <SelectTrigger className="w-[150px]">
+            <SelectTrigger aria-label="Filtrar por status" className="min-h-11 w-full min-w-0 [&>span]:truncate">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -200,7 +206,7 @@ export function OccurrenceList({ onViewDetails, allowDetails = true, onOccurrenc
           </Select>
 
           <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-            <SelectTrigger className="w-[150px]">
+            <SelectTrigger aria-label="Ordenar ocorrências" className="min-h-11 w-full min-w-0 [&>span]:truncate">
               <ArrowUpDown className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Ordenar" />
             </SelectTrigger>
@@ -211,14 +217,14 @@ export function OccurrenceList({ onViewDetails, allowDetails = true, onOccurrenc
               <SelectItem value="recent">Mais recentes</SelectItem>
             </SelectContent>
           </Select>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          {filteredAndSortedOccurrences.length} ocorrência{filteredAndSortedOccurrences.length !== 1 ? "s" : ""} encontrada{filteredAndSortedOccurrences.length !== 1 ? "s" : ""}
+        <p className="self-center text-sm text-muted-foreground" aria-live="polite">
+          {filteredAndSortedOccurrences.length} encontrada{filteredAndSortedOccurrences.length !== 1 ? "s" : ""}
         </p>
+        {titlePreview && <p className="col-span-2 text-sm leading-snug text-muted-foreground sm:col-span-4">Toque e segure uma ocorrência para ler seu nome completo.</p>}
       </div>
 
       {/* List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className={cn("flex min-w-0 flex-col", compact ? "gap-2 p-2" : "gap-3 p-3 sm:p-4")}>
         {filteredAndSortedOccurrences.length === 0 ? (
           <div className="text-center py-12">
             <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -232,25 +238,25 @@ export function OccurrenceList({ onViewDetails, allowDetails = true, onOccurrenc
             const dynamicPriority = getDynamicPriority(occurrence)
             const isHighPriority = dynamicPriority === "alta" && occurrence.supports > 50
             
-            return (
+            const card = (
               <Card
                 key={occurrence.id}
-                role={!allowDetails && onOccurrenceSelect ? "button" : undefined}
-                tabIndex={!allowDetails && onOccurrenceSelect ? 0 : undefined}
-                aria-label={!allowDetails && onOccurrenceSelect ? `Localizar ${occurrence.title} na lista` : undefined}
-                className={`group border-border/50 transition-all duration-300 ${allowDetails ? "cursor-pointer hover:shadow-lg" : onOccurrenceSelect ? "cursor-pointer hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" : ""} ${
+                role={!titlePreview && !allowDetails && onOccurrenceSelect ? "button" : undefined}
+                tabIndex={!titlePreview && !allowDetails && onOccurrenceSelect ? 0 : undefined}
+                aria-label={!titlePreview && !allowDetails && onOccurrenceSelect ? `Localizar ${occurrence.title} na lista` : undefined}
+                className={`group min-w-0 gap-0 py-0 border-border/50 transition-all duration-300 ${allowDetails ? "cursor-pointer hover:shadow-lg" : onOccurrenceSelect ? "cursor-pointer hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" : ""} ${
                   isHighPriority ? "ring-2 ring-red-500/20 bg-red-500/5" : ""
                 }`}
-                onClick={() => allowDetails ? onViewDetails(occurrence) : onOccurrenceSelect?.(occurrence)}
-                onKeyDown={!allowDetails && onOccurrenceSelect ? (event) => {
+                onClick={titlePreview ? undefined : () => allowDetails ? onViewDetails(occurrence) : onOccurrenceSelect?.(occurrence)}
+                onKeyDown={!titlePreview && !allowDetails && onOccurrenceSelect ? (event) => {
                   if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return
                   event.preventDefault()
                   onOccurrenceSelect(occurrence)
                 } : undefined}
               >
-                <CardContent className="p-4">
-                  <div className="flex gap-4">
-                    <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-md bg-muted">
+                <CardContent className={compact ? "p-3" : "p-3 sm:p-4"}>
+                  <div className="flex gap-3">
+                    <div className={cn("shrink-0 overflow-hidden rounded-md bg-muted", compact ? "size-12 sm:size-16" : "size-16 sm:size-20")}>
                       <OccurrenceImage
                         key={`${occurrence.id}-${occurrence.imageUrl ?? "sem-imagem"}`}
                         src={occurrence.imageUrl}
@@ -263,7 +269,7 @@ export function OccurrenceList({ onViewDetails, allowDetails = true, onOccurrenc
                     {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
-                        <h3 className="font-semibold text-foreground line-clamp-2 group-hover:text-primary transition-colors">
+                        <h3 className="break-words font-semibold leading-snug text-foreground group-hover:text-primary transition-colors">
                           {occurrence.title}
                         </h3>
                         {isHighPriority && (
@@ -273,7 +279,7 @@ export function OccurrenceList({ onViewDetails, allowDetails = true, onOccurrenc
                         )}
                       </div>
                       
-                      <div className="flex flex-wrap items-center gap-2 mt-2">
+                      <div className="mt-1 flex flex-wrap items-center gap-1">
                         <Badge variant="outline" className="text-xs">
                           {categoryLabels[occurrence.category]}
                         </Badge>
@@ -286,7 +292,7 @@ export function OccurrenceList({ onViewDetails, allowDetails = true, onOccurrenc
                         )}
                       </div>
                       
-                      <div className="flex flex-wrap items-center gap-3 mt-3 text-sm text-muted-foreground">
+                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <MapPin className="h-3 w-3" />
                           {occurrence.neighborhood}
@@ -300,7 +306,7 @@ export function OccurrenceList({ onViewDetails, allowDetails = true, onOccurrenc
                         </span>
                       </div>
                       
-                      <div className="flex items-center gap-4 mt-3">
+                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
                         <span className="flex items-center gap-1 text-sm font-medium text-foreground">
                           <ThumbsUp className="h-4 w-4 text-primary" />
                           {occurrence.supports} apoio{occurrence.supports !== 1 ? "s" : ""}
@@ -313,7 +319,7 @@ export function OccurrenceList({ onViewDetails, allowDetails = true, onOccurrenc
                     </div>
                     
                     {/* Action */}
-                    {allowDetails ? (
+                    {allowDetails && (
                       <Button
                         variant="ghost"
                         size="icon"
@@ -326,13 +332,16 @@ export function OccurrenceList({ onViewDetails, allowDetails = true, onOccurrenc
                       >
                         <Eye className="h-5 w-5" />
                       </Button>
-                    ) : (
-                      <span className="max-w-24 text-right text-xs text-muted-foreground">Detalhes na próxima tarefa</span>
                     )}
                   </div>
                 </CardContent>
               </Card>
             )
+            return titlePreview ? (
+              <OccurrenceTitlePreview key={occurrence.id} title={occurrence.title} onSelect={() => onOccurrenceSelect?.(occurrence)}>
+                {card}
+              </OccurrenceTitlePreview>
+            ) : card
           })
         )}
       </div>

@@ -83,14 +83,14 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-dvh bg-background">
       <Navigation
         currentPage={currentPage}
         onPageChange={setCurrentPage}
         isAdminDemoMode={isAdminDemoMode}
         onAdminDemoModeChange={setIsAdminDemoMode}
       />
-      <main className="pb-16 lg:pb-0">{renderPage()}</main>
+      <main className="min-w-0 pb-[calc(4rem+env(safe-area-inset-bottom,0px))] lg:pb-0">{renderPage()}</main>
       <Dialog open={nicknameDialogOpen} onOpenChange={(open) => !open && closeNicknameDialog()}>
         <DialogContent>
           <DialogHeader>
