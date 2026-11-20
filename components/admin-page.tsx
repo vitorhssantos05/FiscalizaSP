@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useLayoutEffect, useMemo, useRef, useState } from "react"
 import { useApp } from "@/lib/app-context"
 import type { Occurrence, OccurrenceStatus } from "@/lib/types"
 import { categoryLabels, statusLabels, calculateDynamicPriority, priorityLabels } from "@/lib/types"
@@ -97,6 +97,30 @@ export function AdminPage({ evaluationMode = false, onResearchStatusChange }: Ad
   const { occurrences, updateOccurrenceStatus, getDynamicPriority, canDeleteOccurrence, deleteOccurrence } = useApp()
   const [occurrenceToDelete, setOccurrenceToDelete] = useState<Occurrence | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+
+  const tableViewport = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const viewport = tableViewport.current
+    const table = viewport?.querySelector('table')
+    const rows = table?.tBodies[0]?.rows
+    if (!viewport || !table || !rows || rows.length <= 5) return
+
+    const firstFive = Array.from(rows).slice(0, 5)
+    const resize = () => {
+      const height = firstFive[4].getBoundingClientRect().bottom - table.getBoundingClientRect().top
+      const scrollbar = viewport.offsetHeight - viewport.clientHeight
+      viewport.style.maxHeight = `${Math.ceil(height + scrollbar)}px`
+    }
+    resize()
+    const observer = new ResizeObserver(resize)
+    firstFive.forEach(row => observer.observe(row))
+    if (table.tHead) observer.observe(table.tHead)
+    observer.observe(viewport)
+    return () => {
+      observer.disconnect()
+      viewport.style.removeProperty('max-height')
+    }
+  }, [occurrences])
 
   const handleConfirmDelete = async () => {
     if (!occurrenceToDelete) return
@@ -433,8 +457,14 @@ export function AdminPage({ evaluationMode = false, onResearchStatusChange }: Ad
         <CardContent className="flex min-w-0 flex-col gap-2 px-2 sm:px-6">
           <p className="text-sm text-muted-foreground lg:hidden">Deslize a tabela para visualizar mais informações.</p>
           <div className="min-w-0">
-            <Table aria-label="Gerenciar ocorrências">
-              <TableHeader>
+            <Table aria-label="Gerenciar ocorrências" containerProps={{
+              ref: tableViewport,
+              className: "overflow-auto focus-visible:outline-primary",
+              tabIndex: 0,
+              role: "region",
+              'aria-label': "Rolagem da tabela de ocorrências",
+            }}>
+              <TableHeader className="sticky top-0 z-10 bg-card">
                 <TableRow>
                   <TableHead className="w-40 sm:min-w-[200px]">Título</TableHead>
                   <TableHead>Status</TableHead>
