@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import {
   AlertDialog,
@@ -70,14 +69,19 @@ function OccurrenceStatusSelect({ occurrence, onChange }: {
 }) {
   return (
     <Select value={occurrence.status} onValueChange={(value) => onChange(occurrence.id, value as OccurrenceStatus)}>
-      <SelectTrigger className="min-h-11 w-40 max-w-full" aria-label={`Status de ${occurrence.title}`}>
+      <SelectTrigger className="min-h-11 w-[8.5rem] sm:w-[140px]" aria-label={`Status de ${occurrence.title}`}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
         <SelectGroup>
-          <SelectItem value="resolvida">Resolvida</SelectItem>
-          <SelectItem value="pendente">Pendente</SelectItem>
-          <SelectItem value="em_analise">Em análise</SelectItem>
+          {([['resolvida', 'bg-green-500'], ['pendente', 'bg-orange-600'], ['em_analise', 'bg-blue-500']] as const).map(([status, color]) => (
+            <SelectItem key={status} value={status}>
+              <span className="flex items-center gap-2">
+                <span className={`size-2 rounded-full ${color}`} aria-hidden="true" />
+                {statusLabels[status]}
+              </span>
+            </SelectItem>
+          ))}
         </SelectGroup>
       </SelectContent>
     </Select>
@@ -174,7 +178,6 @@ export function AdminPage({ evaluationMode = false, onResearchStatusChange }: Ad
 
   return (
     <div className={evaluationMode ? "min-w-0 w-full" : "container mx-auto px-4 py-8"}>
-      {!evaluationMode && <>
       <div className="mb-8">
         <h1 className="text-2xl md:text-3xl font-bold text-foreground">Painel Administrativo</h1>
         <p className="text-muted-foreground mt-2">
@@ -188,7 +191,7 @@ export function AdminPage({ evaluationMode = false, onResearchStatusChange }: Ad
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div className={evaluationMode ? "mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4 [&_[data-slot=card-content]]:p-3 lg:[&_[data-slot=card-content]]:p-6" : "grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"}>
         <Card className="border-border/50">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
@@ -244,7 +247,7 @@ export function AdminPage({ evaluationMode = false, onResearchStatusChange }: Ad
       </div>
 
       {/* Additional Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div className={evaluationMode ? "mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3 [&_[data-slot=card-content]]:p-3 lg:[&_[data-slot=card-content]]:p-6" : "grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"}>
         <Card className="border-border/50">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
@@ -419,7 +422,6 @@ export function AdminPage({ evaluationMode = false, onResearchStatusChange }: Ad
         </Card>
       </div>
 
-      </>}
       {/* Occurrences Table */}
       <Card className="min-w-0 border-border/50">
         <CardHeader>
@@ -428,36 +430,15 @@ export function AdminPage({ evaluationMode = false, onResearchStatusChange }: Ad
             Visualize e atualize o status das ocorrências registradas
           </CardDescription>
         </CardHeader>
-        <CardContent className="px-3 sm:px-4 lg:px-6">
-          <ul className="grid gap-3 sm:grid-cols-2 lg:hidden" aria-label="Gerenciar ocorrências">
-            {occurrences.map((occ) => (
-              <li key={occ.id} className="flex min-w-0 flex-col gap-2 rounded-lg border p-3">
-                <h3 className="break-words font-semibold leading-snug">{occ.title}</h3>
-                <p className="text-sm text-muted-foreground">{categoryLabels[occ.category]}</p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-medium">Status:</span>
-                  <OccurrenceStatusSelect occurrence={occ} onChange={handleStatusChange} />
-                </div>
-                {!evaluationMode && (
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
-                    <span>{priorityLabels[getDynamicPriority(occ)]} · {occ.supports} apoios</span>
-                    {canDeleteOccurrence(occ.id) && (
-                      <Button variant="ghost" size="icon" onClick={() => setOccurrenceToDelete(occ)} aria-label={`Excluir ocorrência ${occ.title}`}>
-                        <Trash2 />
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
-          <div className="hidden min-w-0 lg:block">
-                <Table>
+        <CardContent className="flex min-w-0 flex-col gap-2 px-2 sm:px-6">
+          <p className="text-sm text-muted-foreground lg:hidden">Deslize a tabela para visualizar mais informações.</p>
+          <div className="min-w-0">
+            <Table aria-label="Gerenciar ocorrências">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[200px]">Título</TableHead>
-                  <TableHead>Categoria</TableHead>
+                  <TableHead className="w-40 sm:min-w-[200px]">Título</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Categoria</TableHead>
                   <TableHead>Prioridade</TableHead>
                   <TableHead>Data</TableHead>
                   <TableHead className="text-right">Apoios</TableHead>
@@ -469,19 +450,13 @@ export function AdminPage({ evaluationMode = false, onResearchStatusChange }: Ad
                   const dynamicPriority = getDynamicPriority(occ)
                   return (
                     <TableRow key={occ.id}>
-                      <TableCell className="font-medium">
-                        <div className="max-w-[200px] truncate" title={occ.title}>
+                      <TableCell className="font-medium whitespace-normal">
+                        <div className="w-[clamp(6rem,30vw,9rem)] break-words leading-snug sm:w-auto sm:max-w-[200px]" title={occ.title}>
                           {occ.title}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="whitespace-nowrap">
-                          {categoryLabels[occ.category]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <OccurrenceStatusSelect occurrence={occ} onChange={handleStatusChange} />
-                      </TableCell>
+                      <TableCell><OccurrenceStatusSelect occurrence={occ} onChange={handleStatusChange} /></TableCell>
+                      <TableCell><Badge variant="outline" className="whitespace-nowrap">{categoryLabels[occ.category]}</Badge></TableCell>
                       <TableCell>
                         <Badge
                           variant="outline"
