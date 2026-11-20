@@ -63,14 +63,13 @@ const COLORS = {
   orangeLight: "#FB923C",
 }
 
-function OccurrenceStatusSelect({ occurrence, onChange, evaluationMode = false }: {
-  evaluationMode?: boolean
+function OccurrenceStatusSelect({ occurrence, onChange }: {
   occurrence: Occurrence
   onChange: (id: string, status: OccurrenceStatus) => void
 }) {
   return (
     <Select value={occurrence.status} onValueChange={(value) => onChange(occurrence.id, value as OccurrenceStatus)}>
-      <SelectTrigger className={evaluationMode ? "min-h-11 w-[8.5rem] sm:w-[140px]" : "min-h-11 w-40 max-w-full"} aria-label={`Status de ${occurrence.title}`}>
+      <SelectTrigger className="min-h-11 w-[8.5rem] sm:w-[140px]" aria-label={`Status de ${occurrence.title}`}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
@@ -78,7 +77,7 @@ function OccurrenceStatusSelect({ occurrence, onChange, evaluationMode = false }
           {([['resolvida', 'bg-green-500'], ['pendente', 'bg-orange-600'], ['em_analise', 'bg-blue-500']] as const).map(([status, color]) => (
             <SelectItem key={status} value={status}>
               <span className="flex items-center gap-2">
-                {evaluationMode && <span className={`size-2 rounded-full ${color}`} aria-hidden="true" />}
+                <span className={`size-2 rounded-full ${color}`} aria-hidden="true" />
                 {statusLabels[status]}
               </span>
             </SelectItem>
@@ -431,37 +430,15 @@ export function AdminPage({ evaluationMode = false, onResearchStatusChange }: Ad
             Visualize e atualize o status das ocorrências registradas
           </CardDescription>
         </CardHeader>
-        <CardContent className={evaluationMode ? "flex min-w-0 flex-col gap-2 px-2 sm:px-6" : "px-3 sm:px-4 lg:px-6"}>
-          {evaluationMode ? (
-            <p className="text-sm text-muted-foreground lg:hidden">Deslize a tabela para visualizar mais informações.</p>
-          ) : (
-            <ul className="grid gap-3 sm:grid-cols-2 lg:hidden" aria-label="Gerenciar ocorrências">
-              {occurrences.map((occ) => (
-                <li key={occ.id} className="flex min-w-0 flex-col gap-2 rounded-lg border p-3">
-                  <h3 className="break-words font-semibold leading-snug">{occ.title}</h3>
-                  <p className="text-sm text-muted-foreground">{categoryLabels[occ.category]}</p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-medium">Status:</span>
-                    <OccurrenceStatusSelect occurrence={occ} onChange={handleStatusChange} />
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
-                    <span>{priorityLabels[getDynamicPriority(occ)]} · {occ.supports} apoios</span>
-                    {canDeleteOccurrence(occ.id) && (
-                      <Button variant="ghost" size="icon" onClick={() => setOccurrenceToDelete(occ)} aria-label={`Excluir ocorrência ${occ.title}`}>
-                        <Trash2 />
-                      </Button>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className={evaluationMode ? "min-w-0" : "hidden min-w-0 lg:block"}>
-            <Table>
+        <CardContent className="flex min-w-0 flex-col gap-2 px-2 sm:px-6">
+          <p className="text-sm text-muted-foreground lg:hidden">Deslize a tabela para visualizar mais informações.</p>
+          <div className="min-w-0">
+            <Table aria-label="Gerenciar ocorrências">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-40 sm:min-w-[200px]">Título</TableHead>
-                  {(evaluationMode ? ["Status", "Categoria"] : ["Categoria", "Status"]).map(label => <TableHead key={label}>{label}</TableHead>) }
+                  <TableHead>Status</TableHead>
+                  <TableHead>Categoria</TableHead>
                   <TableHead>Prioridade</TableHead>
                   <TableHead>Data</TableHead>
                   <TableHead className="text-right">Apoios</TableHead>
@@ -474,15 +451,12 @@ export function AdminPage({ evaluationMode = false, onResearchStatusChange }: Ad
                   return (
                     <TableRow key={occ.id}>
                       <TableCell className="font-medium whitespace-normal">
-                        <div className={evaluationMode ? "w-36 break-words leading-snug sm:w-auto sm:max-w-[200px]" : "max-w-[200px] truncate"} title={occ.title}>
+                        <div className="w-[clamp(6rem,30vw,9rem)] break-words leading-snug sm:w-auto sm:max-w-[200px]" title={occ.title}>
                           {occ.title}
                         </div>
                       </TableCell>
-                      {(evaluationMode ? ["Status", "Categoria"] : ["Categoria", "Status"]).map(label => (
-                        <TableCell key={label}>
-                          {label === "Status" ? <OccurrenceStatusSelect occurrence={occ} onChange={handleStatusChange} evaluationMode={evaluationMode} /> : <Badge variant="outline" className="whitespace-nowrap">{categoryLabels[occ.category]}</Badge>}
-                        </TableCell>
-                      ))}
+                      <TableCell><OccurrenceStatusSelect occurrence={occ} onChange={handleStatusChange} /></TableCell>
+                      <TableCell><Badge variant="outline" className="whitespace-nowrap">{categoryLabels[occ.category]}</Badge></TableCell>
                       <TableCell>
                         <Badge
                           variant="outline"
