@@ -9,7 +9,7 @@ export const taskHints = {
   "find-occurrence": { seconds: 60, initial: "utilize a busca pelo nome ou os filtros para facilitar a localização.", additional: "No mapa, toque em um marcador para ler o resumo. Depois, use a Lista para localizar a mesma ocorrência; a busca e os filtros podem ajudar." },
   "interact-with-occurrence": { seconds: 90, initial: "explore as informações da ocorrência e as opções de interação disponíveis.", additional: "Role os detalhes da mesma ocorrência para encontrar as opções de comentário, apoio e voto de prioridade." },
   "register-test": { seconds: 120, initial: "observe os campos do formulário e preencha as informações solicitadas.", additional: "Confira título, descrição e categoria, selecione um ponto no mapa e procure o botão de registro. A imagem é opcional." },
-  "admin-panel": { seconds: 45, initial: "encontre uma ocorrência e utilize o controle de status para alterar sua situação.", additional: "Procure o campo de status da ocorrência e toque nele para visualizar as opções disponíveis." },
+  "admin-panel": { seconds: 45, initial: "Explore o painel administrativo e conheça as informações disponíveis. Ao final, procure a seção de gerenciamento de ocorrências para realizar a atividade.", additional: "A tabela Gerenciar Ocorrências fica no final da página. Nela, você pode selecionar uma ocorrência e alterar seu status." },
 } as const
 
 export function EvaluationTaskHint({ taskId, elapsedSeconds, active, view }: {
