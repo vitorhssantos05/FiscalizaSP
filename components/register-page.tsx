@@ -450,7 +450,7 @@ export function RegisterPage({ onSuccess, demoMode = false, onResearchError }: R
               </p>
             )}
 
-            <div className={demoMode ? "h-[clamp(16rem,55dvh,25rem)] rounded-lg overflow-hidden border border-border" : "h-[400px] rounded-lg overflow-hidden border border-border"}>
+            <div className={`mx-auto aspect-square w-full max-w-72 overflow-hidden rounded-lg border border-border md:aspect-auto md:max-w-none ${demoMode ? "md:h-[clamp(16rem,55dvh,25rem)]" : "md:h-[400px]"}`}>
               <MapComponent
                 occurrences={[]}
                 onViewDetails={() => {}}
